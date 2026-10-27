@@ -1,0 +1,99 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+      runs-on: macos-latest
+
+      steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.0'
+
+      - name: Create Xcode Project Structure
+        run: |
+          mkdir -p ColaClicker/ColaClicker
+          mv ContentView.swift ColaClicker/ColaClicker/
+          
+          # Проверяем, есть ли иконка, и настраиваем Assets
+          if [ -f "icon.png" ]; then
+            echo "Иконка найдена, добавляем в проект..."
+            mkdir -p ColaClicker/ColaClicker/Assets.xcassets/AppIcon.appiconset
+            
+            # Создаем базовый Contents.json для иконки
+            cat << 'EOF' > ColaClicker/ColaClicker/Assets.xcassets/AppIcon.appiconset/Contents.json
+            {
+              "images" : [
+                {
+                  "idiom" : "universal",
+                  "platform" : "ios",
+                  "size" : "1024x1024"
+                }
+              ],
+              "info" : {
+                "author" : "xcode",
+                "version" : 1
+              }
+            }
+            EOF
+            
+            # Копируем картинку в набор иконки
+            cp icon.png ColaClicker/ColaClicker/Assets.xcassets/AppIcon.appiconset/icon-1024.png
+            # Обновляем имя файла в JSON под размер 1024
+            sed -i '' 's/"size" : "1024x1024"/'"filename" : "icon-1024.png",\n      "size" : "1024x1024"'/g' ColaClicker/ColaClicker/Assets.xcassets/AppIcon.appiconset/Contents.json
+          fi
+          
+          cat << 'EOF' > ColaClicker/ColaClicker/ColaClickerApp.swift
+          import SwiftUI
+          @main
+          struct CockacolaClickerApp: SwiftUI.App {
+              var body: some Scene {
+                  WindowGroup {
+                      CokeClickerView()
+                  }
+              }
+          }
+          EOF
+
+          cd ColaClicker
+          
+          # Создаем проект с кастомным названием "CocaCola Clicker"
+          cat << 'EOF' > project.yml
+          name: CocaColaClicker
+          options:
+            bundleIdPrefix: com.robert.colaclicker
+          targets:
+            CocaColaClicker:
+              type: application
+              platform: iOS
+              sources: [ColaClicker]
+              settings:
+                CODE_SIGN_IDENTITY: ""
+                CODE_SIGNING_REQUIRED: "NO"
+                CODE_SIGNING_ALLOWED: "NO"
+          EOF
+          
+          brew install xcodegen
+          xcodegen generate
+          
+          xcodebuild -project CocaColaClicker.xcodeproj -scheme CocaColaClicker -sdk iphoneos -configuration Release CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED="NO" CODE_SIGNING_ALLOWED="NO" build SYMROOT=$(pwd)/build
+
+      - name: Package .ipa
+        run: |
+          cd ColaClicker
+          mkdir -p Payload
+          cp -r build/Release-iphoneos/CocaColaClicker.app Payload/
+          zip -r ColaClicker.ipa Payload/
+          
+      - name: Upload .ipa Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ColaClicker-ipa
+          path: ColaClicker/ColaClicker/ColaClicker.ipa
