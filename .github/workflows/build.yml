@@ -44,7 +44,6 @@ jobs:
           echo "    }" >> Sources/App.swift
           echo "}" >> Sources/App.swift
 
-          # Собираем под реальное устройство с актуальным deploymentTarget
           echo "name: CocaColaClicker" > project.yml
           echo "options:" >> project.yml
           echo "  bundleIdPrefix: com.robert.colaclicker" >> project.yml
@@ -52,7 +51,7 @@ jobs:
           echo "  CocaColaClicker:" >> project.yml
           echo "    type: application" >> project.yml
           echo "    platform: iOS" >> project.yml
-          echo "    deploymentTarget: \"17.0\"" >> project.yml
+          echo "    deploymentTarget: \"16.0\"" >> project.yml
           echo "    sources: [Sources]" >> project.yml
           echo "    settings:" >> project.yml
           echo "      GENERATE_INFOPLIST_FILE: \"YES\"" >> project.yml
@@ -60,8 +59,16 @@ jobs:
           brew install xcodegen
           xcodegen generate
           
-          # Собираем под iphoneos (реальный айфон) без подписи кодом (для установки через AltStore/Sideloadly)
-          xcodebuild -project CocaColaClicker.xcodeproj -scheme CocaColaClicker -sdk iphoneos -configuration Release build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO SYMROOT=$(pwd)/build
+          # Явный билдинг под архитектуру arm64 (iphoneos)
+          xcodebuild -project CocaColaClicker.xcodeproj \
+                     -scheme CocaColaClicker \
+                     -sdk iphoneos \
+                     -configuration Release \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGNING_ALLOWED=NO \
+                     ONLY_ACTIVE_ARCH=NO \
+                     build SYMROOT=$(pwd)/build
 
       - name: Package .ipa
         run: |
