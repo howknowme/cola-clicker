@@ -126,7 +126,7 @@ struct ContentView: View {
         .alert("С возвращением!", isPresented: $showOffline) {
             Button("Ок", role: .cancel) {}
         } message: {
-            Text("Пока вас не было, автокликер набил +\(offlineGain) крышек")
+            Text("Пока вас не было, автокликер набил \(offlineGain) крышек")
         }
     }
 
@@ -162,40 +162,3 @@ struct ContentView: View {
         .disabled(count < cost)
     }
 }
-
-struct AdminView: View {
-    @Binding var count: Int
-    @Environment(\.dismiss) private var dismiss
-    @State private var text = ""
-    @FocusState private var focused: Bool
-
-    private let limit = 1_000_000_000_000
-
-    private func add(_ n: Int) {
-        let safe = max(0, min(n, limit))
-        count = min(count + safe, limit)
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
-    }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Сейчас крышек") {
-                    Text("\(count)").font(.title2.bold())
-                }
-
-                Section("Добавить своё число") {
-                    TextField("Например, 5000", text: $text)
-                        .keyboardType(.numberPad)
-                        .focused($focused)
-                    Button("Добавить") {
-                        if let n = Int(text) { add(n) }
-                        text = ""
-                        focused = false
-                    }
-                    .disabled(Int(text) == nil)
-                }
-
-                Section("Быстро") {
-                    HStack {
-                        quick("
