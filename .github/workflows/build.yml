@@ -6,123 +6,132 @@ on:
 
 jobs:
   build:
-      runs-on: macos-latest
+    runs-on: macos-latest
 
-      steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-      - name: Set up Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '26.5.0'
+    - name: Build App Manually
+      run: |
+        # Создаем структуру .app пакета
+        APP_NAME="CocaColaClicker"
+        BUNDLE_ID="com.robert.colaclicker"
+        
+        mkdir -p Payload/$APP_NAME.app
+        
+        # Пишем исходный код ContentView
+        cat << 'EOF' > ContentView.swift
+        import SwiftUI
 
-      - name: Create Xcode Project Structure
-        run: |
-          mkdir -p Sources
-          mkdir -p Sources/Assets.xcassets/AppIcon.appiconset
-          
-          # Создаем базовый Info.plist с иконкой и манифестом
-          cat << 'EOF' > Sources/Info.plist
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>CFBundleIdentifier</key>
-              <string>com.robert.colaclicker</string>
-              <key>CFBundleName</key>
-              <string>CocaColaClicker</string>
-              <key>CFBundleDisplayName</key>
-              <string>CocaColaClicker</string>
-              <key>CFBundleShortVersionString</key>
-              <string>1.0</string>
-              <key>CFBundleVersion</key>
-              <string>1</string>
-              <key>MinimumOSVersion</key>
-              <string>17.0</string>
-              <key>UIDeviceFamily</key>
-              <array>
-                  <integer>1</integer>
-              </array>
-              <key>UILaunchScreen</key>
-              <dict/>
-              <key>CFBundleIconName</key>
-              <string>AppIcon</string>
-          </dict>
-          </plist>
-          EOF
-
-          # Пустой Contents.json для правильной структуры иконки, чтобы Xcode не ругался
-          cat << 'EOF' > Sources/Assets.xcassets/AppIcon.appiconset/Contents.json
-          {
-            "info" : {
-              "author" : "xcode",
-              "version" : 1
+        struct ContentView: View {
+            @State private var count = 0
+            
+            var body: some View {
+                ZStack {
+                    LinearGradient(colors: [.red, .black], startPoint: .top, endPoint: .bottom)
+                        .ignoresSafeArea()
+                    
+                    VStack(spacing: 25) {
+                        Text("Coca-Cola Clicker")
+                            .font(.largeTitle)
+                            .fontWeight(.heavy)
+                            .foregroundColor(.white)
+                        
+                        Text("Score: \(count)")
+                            .font(.system(size: 40, weight: .bold))
+                            .foregroundColor(.yellow)
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            count += 1
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.white)
+                                    .frame(width: 180, height: 180)
+                                    .shadow(radius: 10)
+                                
+                                VStack(spacing: 5) {
+                                    Image(systemName: "cup.and.saucer.fill")
+                                        .font(.system(size: 60))
+                                        .foregroundColor(.red)
+                                    
+                                    Text("DRINK!")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.black)
+                                }
+                            }
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding()
+                }
             }
-          }
-          EOF
+        }
+        EOF
 
-          echo "import SwiftUI" > Sources/ContentView.swift
-          echo "struct ContentView: View {" >> Sources/ContentView.swift
-          echo "    @State private var count = 0" >> Sources/ContentView.swift
-          echo "    var body: some View {" >> Sources/ContentView.swift
-          echo "        VStack(spacing: 20) {" >> Sources/ContentView.swift
-          echo "            Text(\"Coca-Cola Clicker\").font(.largeTitle).bold()" >> Sources/ContentView.swift
-          echo "            Text(\"Score: \\(count)\").font(.title)" >> Sources/ContentView.swift
-          echo "            Button(\"Drink Cola!\") { count += 1 }" >> Sources/ContentView.swift
-          echo "                .buttonStyle(.borderedProminent)" >> Sources/ContentView.swift
-          echo "        }" >> Sources/ContentView.swift
-          echo "    }" >> Sources/ContentView.swift
-          echo "}" >> Sources/ContentView.swift
-          
-          echo "import SwiftUI" > Sources/App.swift
-          echo "@main" >> Sources/App.swift
-          echo "struct ColaClickerApp: App {" >> Sources/App.swift
-          echo "    var body: some Scene {" >> Sources/App.swift
-          echo "        WindowGroup {" >> Sources/App.swift
-          echo "            ContentView()" >> Sources/App.swift
-          echo "        }" >> Sources/App.swift
-          echo "    }" >> Sources/App.swift
-          echo "}" >> Sources/App.swift
+        # Пишем точку входа App.swift
+        cat << 'EOF' > App.swift
+        import SwiftUI
 
-          # Прописываем правильный проект через xcodegen
-          cat << 'EOF' > project.yml
-          name: CocaColaClicker
-          options:
-            bundleIdPrefix: com.robert.colaclicker
-          targets:
-            CocaColaClicker:
-              type: application
-              platform: iOS
-              deploymentTarget: "17.0"
-              sources: [Sources]
-              settings:
-                INFOPLIST_FILE: Sources/Info.plist
-                ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-                TARGETED_DEVICE_FAMILY: "1"
-          EOF
-          
-          brew install xcodegen
-          xcodegen generate
-          
-          xcodebuild -project CocaColaClicker.xcodeproj \
-                     -scheme CocaColaClicker \
-                     -sdk iphoneos \
-                     -configuration Release \
-                     CODE_SIGN_IDENTITY="" \
-                     CODE_SIGNING_REQUIRED=NO \
-                     CODE_SIGNING_ALLOWED=NO \
-                     ONLY_ACTIVE_ARCH=NO \
-                     build SYMROOT=$(pwd)/build
+        @main
+        struct ColaClickerApp: App {
+            var body: some Scene {
+                WindowGroup {
+                    ContentView()
+                }
+            }
+        }
+        EOF
 
-      - name: Package .ipa
-        run: |
-          mkdir -p Payload
-          cp -r build/Release-iphoneos/CocaColaClicker.app Payload/
-          zip -r ColaClicker.ipa Payload/
-          
-      - name: Upload .ipa Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ColaClicker-ipa
-          path: ColaClicker.ipa
+        # Компилируем напрямую под arm64 для реального айфона
+        swiftc -target arm64-apple-ios17.0 \
+               -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
+               -framework SwiftUI \
+               -framework UIKit \
+               -framework Foundation \
+               ContentView.swift App.swift \
+               -o Payload/$APP_NAME.app/$APP_NAME
+
+        # Создаем правильный Info.plist
+        cat << 'EOF' > Payload/$APP_NAME.app/Info.plist
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleIdentifier</key>
+            <string>com.robert.colaclicker</string>
+            <key>CFBundleName</key>
+            <string>CocaColaClicker</string>
+            <key>CFBundleDisplayName</key>
+            <string>CocaColaClicker</string>
+            <key>CFBundleShortVersionString</key>
+            <string>1.0</string>
+            <key>CFBundleVersion</key>
+            <string>1</string>
+            <key>MinimumOSVersion</key>
+            <string>17.0</string>
+            <key>UIDeviceFamily</key>
+            <array>
+                <integer>1</integer>
+            </array>
+            <key>UILaunchScreen</key>
+            <dict/>
+            <key>CFBundleExecutable</key>
+            <string>CocaColaClicker</string>
+        </dict>
+        </plist>
+        EOF
+
+        # Запаковываем в готовый .ipa
+        zip -r ColaClicker.ipa Payload
+
+    - name: Upload .ipa Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ColaClicker-ipa
+        path: ColaClicker.ipa
