@@ -32,12 +32,6 @@ jobs:
             echo "}" >> Sources/ContentView.swift
           fi
           
-          if [ -f "icon.png" ]; then
-            mkdir -p Sources/Assets.xcassets/AppIcon.appiconset
-            echo '{"images":[{"idiom":"universal","platform":"ios","size":"1024x1024"}],"info":{"author":"xcode","version":1}}' > Sources/Assets.xcassets/AppIcon.appiconset/Contents.json
-            cp icon.png Sources/Assets.xcassets/AppIcon.appiconset/icon-1024.png
-          fi
-          
           echo "import SwiftUI" > Sources/App.swift
           echo "@main" >> Sources/App.swift
           echo "struct ColaClickerApp: App {" >> Sources/App.swift
@@ -48,6 +42,7 @@ jobs:
           echo "    }" >> Sources/App.swift
           echo "}" >> Sources/App.swift
 
+          # Создаем project.yml без подключения сторонних ассетов, чтобы избежать ошибок
           echo "name: CocaColaClicker" > project.yml
           echo "options:" >> project.yml
           echo "  bundleIdPrefix: com.robert.colaclicker" >> project.yml
