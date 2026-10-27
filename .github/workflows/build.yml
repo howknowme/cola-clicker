@@ -21,7 +21,17 @@ jobs:
         run: |
           mkdir -p CocaClicker
           
-          find . -maxdepth 2 -name "ContentView.swift" -exec cp {} CocaClicker/ \;
+          # Находим ContentView.swift, убираем из него лишний @main если он там есть, и копируем
+          if [ -f "ContentView.swift" ]; then
+            sed '/@main/d' ContentView.swift > CocaClicker/ContentView.swift
+          else
+            echo "import SwiftUI" > CocaClicker/ContentView.swift
+            echo "struct ContentView: View {" >> CocaClicker/ContentView.swift
+            echo "    var body: some View {" >> CocaClicker/ContentView.swift
+            echo "        Text(\"Hello Cola!\")" >> CocaClicker/ContentView.swift
+            echo "    }" >> CocaClicker/ContentView.swift
+            echo "}" >> CocaClicker/ContentView.swift
+          fi
           
           if [ -f "icon.png" ]; then
             mkdir -p CocaClicker/Assets.xcassets/AppIcon.appiconset
@@ -29,7 +39,7 @@ jobs:
             cp icon.png CocaClicker/Assets.xcassets/AppIcon.appiconset/icon-1024.png
           fi
           
-          # Упрощенная точка входа без конфликтов имён
+          # Единственная точка входа с @main
           echo "import SwiftUI" > CocaClicker/App.swift
           echo "@main" >> CocaClicker/App.swift
           echo "struct ColaClickerApp: App {" >> CocaClicker/App.swift
@@ -54,12 +64,12 @@ jobs:
           brew install xcodegen
           xcodegen generate
           
-          xcodebuild -project CocaClicker.xcodeproj -scheme CocaClicker -sdk iphonesimulator -configuration Release build SYMROOT=$(pwd)/build
+          xcodebuild -project CocaColaClicker.xcodeproj -scheme CocaColaClicker -sdk iphonesimulator -configuration Release build SYMROOT=$(pwd)/build
 
       - name: Package .ipa
         run: |
           mkdir -p Payload
-          cp -r build/Release-iphonesimulator/CocaClicker.app Payload/
+          cp -r build/Release-iphonesimulator/CocaColaClicker.app Payload/
           zip -r ColaClicker.ipa Payload/
           
       - name: Upload .ipa Artifact
