@@ -19,34 +19,34 @@ jobs:
 
       - name: Create Xcode Project Structure
         run: |
-          mkdir -p CocaClicker
+          mkdir -p Sources
           
           if [ -f "ContentView.swift" ]; then
-            sed '/@main/d' ContentView.swift > CocaClicker/ContentView.swift
+            sed '/@main/d' ContentView.swift > Sources/ContentView.swift
           else
-            echo "import SwiftUI" > CocaClicker/ContentView.swift
-            echo "struct ContentView: View {" >> CocaClicker/ContentView.swift
-            echo "    var body: some View {" >> CocaClicker/ContentView.swift
-            echo "        Text(\"Hello Cola!\")" >> CocaClicker/ContentView.swift
-            echo "    }" >> CocaClicker/ContentView.swift
-            echo "}" >> CocaClicker/ContentView.swift
+            echo "import SwiftUI" > Sources/ContentView.swift
+            echo "struct ContentView: View {" >> Sources/ContentView.swift
+            echo "    var body: some View {" >> Sources/ContentView.swift
+            echo "        Text(\"Hello Cola!\")" >> Sources/ContentView.swift
+            echo "    }" >> Sources/ContentView.swift
+            echo "}" >> Sources/ContentView.swift
           fi
           
           if [ -f "icon.png" ]; then
-            mkdir -p CocaClicker/Assets.xcassets/AppIcon.appiconset
-            echo '{"images":[{"idiom":"universal","platform":"ios","size":"1024x1024"}],"info":{"author":"xcode","version":1}}' > CocaClicker/Assets.xcassets/AppIcon.appiconset/Contents.json
-            cp icon.png CocaClicker/Assets.xcassets/AppIcon.appiconset/icon-1024.png
+            mkdir -p Sources/Assets.xcassets/AppIcon.appiconset
+            echo '{"images":[{"idiom":"universal","platform":"ios","size":"1024x1024"}],"info":{"author":"xcode","version":1}}' > Sources/Assets.xcassets/AppIcon.appiconset/Contents.json
+            cp icon.png Sources/Assets.xcassets/AppIcon.appiconset/icon-1024.png
           fi
           
-          echo "import SwiftUI" > CocaClicker/App.swift
-          echo "@main" >> CocaClicker/App.swift
-          echo "struct ColaClickerApp: App {" >> CocaClicker/App.swift
-          echo "    var body: some Scene {" >> CocaClicker/App.swift
-          echo "        WindowGroup {" >> CocaClicker/App.swift
-          echo "            ContentView()" >> CocaClicker/App.swift
-          echo "        }" >> CocaClicker/App.swift
-          echo "    }" >> CocaClicker/App.swift
-          echo "}" >> CocaClicker/App.swift
+          echo "import SwiftUI" > Sources/App.swift
+          echo "@main" >> Sources/App.swift
+          echo "struct ColaClickerApp: App {" >> Sources/App.swift
+          echo "    var body: some Scene {" >> Sources/App.swift
+          echo "        WindowGroup {" >> Sources/App.swift
+          echo "            ContentView()" >> Sources/App.swift
+          echo "        }" >> Sources/App.swift
+          echo "    }" >> Sources/App.swift
+          echo "}" >> Sources/App.swift
 
           echo "name: CocaColaClicker" > project.yml
           echo "options:" >> project.yml
@@ -55,20 +55,17 @@ jobs:
           echo "  CocaColaClicker:" >> project.yml
           echo "    type: application" >> project.yml
           echo "    platform: iOS" >> project.yml
-          echo "    sources: [.]" >> project.yml
+          echo "    sources: [Sources]" >> project.yml
           echo "    settings:" >> project.yml
           echo "      GENERATE_INFOPLIST_FILE: \"YES\"" >> project.yml
           
           brew install xcodegen
           xcodegen generate
           
-          # Переходим в папку проекта для сборки
-          cd CocaClicker
           xcodebuild -project CocaColaClicker.xcodeproj -scheme CocaColaClicker -sdk iphonesimulator -configuration Release build SYMROOT=$(pwd)/build
 
       - name: Package .ipa
         run: |
-          cd CocaClicker
           mkdir -p Payload
           cp -r build/Release-iphonesimulator/CocaColaClicker.app Payload/
           zip -r ColaClicker.ipa Payload/
@@ -77,4 +74,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ColaClicker-ipa
-          path: CocaClicker/ColaClicker.ipa
+          path: ColaClicker.ipa
