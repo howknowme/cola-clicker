@@ -1,138 +1,96 @@
-name: Build iOS App
+name: Build IPA
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  APP_NAME: CocaColaClicker
+  BUNDLE_ID: app.forest5669.sapodilla72
+  TEAM_ID: 65ZBN43KNV
 
 jobs:
   build:
-    runs-on: macos-latest
-
+    runs-on: macos-15
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Build with Correct Bundle ID
-      run: |
-        APP_NAME="CocaColaClicker"
-        # Используем твой Bundle ID из .mobileprovision профиля
-        BUNDLE_ID="app.forest5669.sapodilla72"
-        TEAM_ID="65ZBN43KNV"
-        
-        mkdir -p Payload/$APP_NAME.app
-        
-        # Пишем код ContentView.swift
-        cat << 'EOF' > ContentView.swift
-        import SwiftUI
+      - name: Compile
+        run: |
+          set -euo pipefail
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          APP="build/${APP_NAME}.app"
+          rm -rf build && mkdir -p "$APP"
+          xcrun --sdk iphoneos swiftc -sdk "$SDK" \
+            -target arm64-apple-ios17.0 -parse-as-library -O \
+            -module-name "$APP_NAME" \
+            -Xlinker -rpath -Xlinker @executable_path/Frameworks \
+            ContentView.swift -o "$APP/$APP_NAME"
 
-        struct ContentView: View {
-            @State private var count = 0
-            
-            var body: some View {
-                ZStack {
-                    Color.black.ignoresSafeArea()
-                    VStack(spacing: 25) {
-                        Text("Coca-Cola Clicker")
-                            .font(.largeTitle)
-                            .fontWeight(.heavy)
-                            .foregroundColor(.red)
-                        
-                        Text("Score: \(count)")
-                            .font(.system(size: 40, weight: .bold))
-                            .foregroundColor(.white)
-                        
-                        Button(action: {
-                            count += 1
-                        }) {
-                            Text("DRINK COLA")
-                                .font(.headline)
-                                .padding()
-                                .background(Color.red)
-                                .foregroundColor(.white)
-                                .cornerRadius(15)
-                        }
-                    }
-                }
-            }
-        }
-        EOF
+      - name: Info.plist and icon
+        run: |
+          set -euo pipefail
+          APP="build/${APP_NAME}.app"
+          cat > "$APP/Info.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>CFBundleExecutable</key><string>${APP_NAME}</string>
+            <key>CFBundleIdentifier</key><string>${BUNDLE_ID}</string>
+            <key>CFBundleName</key><string>${APP_NAME}</string>
+            <key>CFBundleDisplayName</key><string>Coca-Cola Clicker</string>
+            <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+            <key>CFBundlePackageType</key><string>APPL</string>
+            <key>CFBundleShortVersionString</key><string>1.0</string>
+            <key>CFBundleVersion</key><string>1</string>
+            <key>CFBundleSupportedPlatforms</key><array><string>iPhoneOS</string></array>
+            <key>MinimumOSVersion</key><string>17.0</string>
+            <key>LSRequiresIPhoneOS</key><true/>
+            <key>UIDeviceFamily</key><array><integer>1</integer><integer>2</integer></array>
+            <key>UIRequiredDeviceCapabilities</key><array><string>arm64</string></array>
+            <key>UILaunchScreen</key><dict/>
+            <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string></array>
+          </dict></plist>
+          EOF
 
-        cat << 'EOF' > App.swift
-        import SwiftUI
+          mkdir -p build/Assets.xcassets/AppIcon.appiconset
+          sips -z 1024 1024 -s format jpeg icon.png --out build/tmp.jpg
+          sips -s format png build/tmp.jpg --out build/Assets.xcassets/AppIcon.appiconset/Icon-1024.png
+          echo '{"info":{"version":1,"author":"xcode"}}' > build/Assets.xcassets/Contents.json
+          echo '{"images":[{"filename":"Icon-1024.png","idiom":"universal","platform":"ios","size":"1024x1024"}],"info":{"version":1,"author":"xcode"}}' > build/Assets.xcassets/AppIcon.appiconset/Contents.json
 
-        @main
-        struct ColaClickerApp: App {
-            var body: some Scene {
-                WindowGroup {
-                    ContentView()
-                }
-            }
-        }
-        EOF
+          xcrun actool build/Assets.xcassets --compile "$APP" \
+            --platform iphoneos --minimum-deployment-target 17.0 \
+            --app-icon AppIcon --target-device iphone --target-device ipad \
+            --output-partial-info-plist build/assetinfo.plist
+          /usr/libexec/PlistBuddy -c "Merge build/assetinfo.plist" "$APP/Info.plist"
+          plutil -lint "$APP/Info.plist"
 
-        # Компилируем под реальный iPhone arm64
-        swiftc -target arm64-apple-ios17.0 \
-               -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
-               -framework SwiftUI \
-               -framework UIKit \
-               -framework Foundation \
-               ContentView.swift App.swift \
-               -o Payload/$APP_NAME.app/$APP_NAME
+      - name: Sign
+        run: |
+          set -euo pipefail
+          APP="build/${APP_NAME}.app"
+          cat > build/entitlements.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>application-identifier</key><string>${TEAM_ID}.${BUNDLE_ID}</string>
+            <key>com.apple.developer.team-identifier</key><string>${TEAM_ID}</string>
+            <key>get-task-allow</key><false/>
+          </dict></plist>
+          EOF
+          codesign --force --sign - --entitlements build/entitlements.plist --timestamp=none "$APP"
+          codesign --verify --verbose=2 "$APP"
 
-        # Создаем Info.plist с твоим Bundle ID
-        cat << 'EOF' > Payload/$APP_NAME.app/Info.plist
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-            <key>CFBundleIdentifier</key>
-            <string>app.forest5669.sapodilla72</string>
-            <key>CFBundleName</key>
-            <string>CocaColaClicker</string>
-            <key>CFBundleDisplayName</key>
-            <string>CocaColaClicker</string>
-            <key>CFBundleShortVersionString</key>
-            <string>1.0</string>
-            <key>CFBundleVersion</key>
-            <string>1</string>
-            <key>MinimumOSVersion</key>
-            <string>17.0</string>
-            <key>UIDeviceFamily</key>
-            <array>
-                <integer>1</integer>
-            </array>
-            <key>UILaunchScreen</key>
-            <dict/>
-            <key>CFBundleExecutable</key>
-            <string>CocaColaClicker</string>
-        </dict>
-        </plist>
-        EOF
+      - name: Package IPA
+        run: |
+          set -euo pipefail
+          mkdir -p build/Payload
+          cp -R "build/${APP_NAME}.app" build/Payload/
+          (cd build && zip -qry "${APP_NAME}.ipa" Payload)
 
-        # Создаем entitlements под твой Team ID и Bundle ID
-        cat << 'EOF' > entitlements.plist
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-            <key>application-identifier</key>
-            <string>65ZBN43KNV.app.forest5669.sapodilla72</string>
-            <key>com.apple.developer.team-identifier</key>
-            <string>65ZBN43KNV</string>
-            <key>get-task-allow</key>
-            <true/>
-        </dict>
-        </plist>
-        EOF
-
-        # Подписываем заглушкой с правильными правами
-        codesign -s - --entitlements entitlements.plist Payload/$APP_NAME.app
-
-        # Запаковываем в .ipa
-        zip -r ColaClicker.ipa Payload
-
-    - name: Upload .ipa Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ColaClicker-ipa
-        path: ColaClicker.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-ipa
+          path: build/${{ env.APP_NAME }}.ipa
