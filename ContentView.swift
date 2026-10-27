@@ -17,6 +17,8 @@ struct ContentView: View {
     @State private var showAdmin = false
     @State private var showOffline = false
     @State private var offlineGain = 0
+    @State private var taps = 0
+    @State private var lastTap = Date.distantPast
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -34,7 +36,7 @@ struct ContentView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 24) {
-                Text("Coca-Cola Clicker v3")
+                Text("Coca-Cola Clicker")
                     .font(.largeTitle.bold())
                     .foregroundStyle(.white)
                     .minimumScaleFactor(0.5)
@@ -44,14 +46,24 @@ struct ContentView: View {
                     Text("\(count)")
                         .font(.system(size: 64, weight: .heavy, design: .rounded))
                         .foregroundStyle(.white)
-                        .contentTransition(.numericText())
                         .minimumScaleFactor(0.4)
                         .lineLimit(1)
                     Text("крышек")
                         .foregroundStyle(.white.opacity(0.7))
                 }
+                .frame(minWidth: 200, minHeight: 100)
                 .contentShape(Rectangle())
-                .onTapGesture(count: 3) { showAdmin = true }
+                .onTapGesture {
+                    let now = Date()
+                    if now.timeIntervalSince(lastTap) > 1 { taps = 0 }
+                    lastTap = now
+                    taps += 1
+                    if taps >= 3 {
+                        taps = 0
+                        showAdmin = true
+                    }
+                }
+                .onLongPressGesture(minimumDuration: 1.5) { showAdmin = true }
 
                 Text("+\(perClick) за клик • +\(autoRate)/сек")
                     .foregroundStyle(.white.opacity(0.8))
@@ -85,6 +97,10 @@ struct ContentView: View {
                     }
                 }
                 .padding(.horizontal)
+
+                Text(buildStamp)
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.4))
             }
             .padding()
         }
@@ -182,29 +198,4 @@ struct AdminView: View {
 
                 Section("Быстро") {
                     HStack {
-                        quick("+1K", 1_000)
-                        quick("+100K", 100_000)
-                        quick("+1M", 1_000_000)
-                        quick("+1B", 1_000_000_000)
-                    }
-                }
-            }
-            .navigationTitle("Админ")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Закрыть") { dismiss() }
-                }
-                ToolbarItem(placement: .keyboard) {
-                    Button("Готово") { focused = false }
-                }
-            }
-        }
-    }
-
-    private func quick(_ title: String, _ value: Int) -> some View {
-        Button(title) { add(value) }
-            .buttonStyle(.bordered)
-            .frame(maxWidth: .infinity)
-    }
-}
+                        quick("
