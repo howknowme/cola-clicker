@@ -1,5 +1,5 @@
 import SwiftUI
-
+ 
 @main
 struct CocaColaClickerApp: App {
     var body: some Scene {
