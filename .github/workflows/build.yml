@@ -15,7 +15,7 @@ jobs:
       - name: Set up Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '15.0'
+          xcode-version: '26.5.0'
 
       - name: Create Xcode Project Structure
         run: |
@@ -64,7 +64,7 @@ jobs:
 
           cd ColaClicker
           
-          # Создаем проект с кастомным названием "CocaCola Clicker"
+          # Создаем проект с кастомным названием
           cat << 'EOF' > project.yml
           name: CocaColaClicker
           options:
