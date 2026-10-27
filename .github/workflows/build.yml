@@ -20,7 +20,48 @@ jobs:
       - name: Create Xcode Project Structure
         run: |
           mkdir -p Sources
+          mkdir -p Sources/Assets.xcassets/AppIcon.appiconset
           
+          # Создаем базовый Info.plist с иконкой и манифестом
+          cat << 'EOF' > Sources/Info.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleIdentifier</key>
+              <string>com.robert.colaclicker</string>
+              <key>CFBundleName</key>
+              <string>CocaColaClicker</string>
+              <key>CFBundleDisplayName</key>
+              <string>CocaColaClicker</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.0</string>
+              <key>CFBundleVersion</key>
+              <string>1</string>
+              <key>MinimumOSVersion</key>
+              <string>17.0</string>
+              <key>UIDeviceFamily</key>
+              <array>
+                  <integer>1</integer>
+              </array>
+              <key>UILaunchScreen</key>
+              <dict/>
+              <key>CFBundleIconName</key>
+              <string>AppIcon</string>
+          </dict>
+          </plist>
+          EOF
+
+          # Пустой Contents.json для правильной структуры иконки, чтобы Xcode не ругался
+          cat << 'EOF' > Sources/Assets.xcassets/AppIcon.appiconset/Contents.json
+          {
+            "info" : {
+              "author" : "xcode",
+              "version" : 1
+            }
+          }
+          EOF
+
           echo "import SwiftUI" > Sources/ContentView.swift
           echo "struct ContentView: View {" >> Sources/ContentView.swift
           echo "    @State private var count = 0" >> Sources/ContentView.swift
@@ -44,20 +85,22 @@ jobs:
           echo "    }" >> Sources/App.swift
           echo "}" >> Sources/App.swift
 
-          # Чистый project.yml без кастомного Info.plist — Xcode сам сгенерирует идеальный манифест
-          echo "name: CocaColaClicker" > project.yml
-          echo "options:" >> project.yml
-          echo "  bundleIdPrefix: com.robert.colaclicker" >> project.yml
-          echo "targets:" >> project.yml
-          echo "  CocaColaClicker:" >> project.yml
-          echo "    type: application" >> project.yml
-          echo "    platform: iOS" >> project.yml
-          echo "    deploymentTarget: \"17.0\"" >> project.yml
-          echo "    sources: [Sources]" >> project.yml
-          echo "    settings:" >> project.yml
-          echo "      GENERATE_INFOPLIST_FILE: \"YES\"" >> project.yml
-          echo "      CURRENT_PROJECT_VERSION: \"1\"" >> project.yml
-          echo "      MARKETING_VERSION: \"1.0\"" >> project.yml
+          # Прописываем правильный проект через xcodegen
+          cat << 'EOF' > project.yml
+          name: CocaColaClicker
+          options:
+            bundleIdPrefix: com.robert.colaclicker
+          targets:
+            CocaColaClicker:
+              type: application
+              platform: iOS
+              deploymentTarget: "17.0"
+              sources: [Sources]
+              settings:
+                INFOPLIST_FILE: Sources/Info.plist
+                ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+                TARGETED_DEVICE_FAMILY: "1"
+          EOF
           
           brew install xcodegen
           xcodegen generate
