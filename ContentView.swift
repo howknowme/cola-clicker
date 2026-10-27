@@ -35,7 +35,7 @@ struct ContentView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 24) {
-                Text("Coca-Cola Clicker")
+                Text("Coca-Cola Clicker v3")
                     .font(.largeTitle.bold())
                     .foregroundStyle(.white)
 
