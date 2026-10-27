@@ -29,21 +29,22 @@ jobs:
             cp icon.png CocaClicker/Assets.xcassets/AppIcon.appiconset/icon-1024.png
           fi
           
-          echo "import SwiftUI" > CocaClicker/ColaClickerApp.swift
-          echo "@main" >> CocaClicker/ColaClickerApp.swift
-          echo "struct CockacolaClickerApp: SwiftUI.App {" >> CocaClicker/ColaClickerApp.swift
-          echo "    var body: some Scene {" >> CocaClicker/ColaClickerApp.swift
-          echo "        WindowGroup {" >> CocaClicker/ColaClickerApp.swift
-          echo "            CokeClickerView()" >> CocaClicker/ColaClickerApp.swift
-          echo "        }" >> CocaClicker/ColaClickerApp.swift
-          echo "    }" >> CocaClicker/ColaClickerApp.swift
-          echo "}" >> CocaClicker/ColaClickerApp.swift
+          # Упрощенная точка входа без конфликтов имён
+          echo "import SwiftUI" > CocaClicker/App.swift
+          echo "@main" >> CocaClicker/App.swift
+          echo "struct ColaClickerApp: App {" >> CocaClicker/App.swift
+          echo "    var body: some Scene {" >> CocaClicker/App.swift
+          echo "        WindowGroup {" >> CocaClicker/App.swift
+          echo "            ContentView()" >> CocaClicker/App.swift
+          echo "        }" >> CocaClicker/App.swift
+          echo "    }" >> CocaClicker/App.swift
+          echo "}" >> CocaClicker/App.swift
 
-          echo "name: CocaColaClicker" > project.yml
+          echo "name: CocaClicker" > project.yml
           echo "options:" >> project.yml
           echo "  bundleIdPrefix: com.robert.colaclicker" >> project.yml
           echo "targets:" >> project.yml
-          echo "  CocaColaClicker:" >> project.yml
+          echo "  CocaClicker:" >> project.yml
           echo "    type: application" >> project.yml
           echo "    platform: iOS" >> project.yml
           echo "    sources: [CocaClicker]" >> project.yml
@@ -53,12 +54,12 @@ jobs:
           brew install xcodegen
           xcodegen generate
           
-          xcodebuild -project CocaColaClicker.xcodeproj -scheme CocaColaClicker -sdk iphonesimulator -configuration Release build SYMROOT=$(pwd)/build -verbose
+          xcodebuild -project CocaClicker.xcodeproj -scheme CocaClicker -sdk iphonesimulator -configuration Release build SYMROOT=$(pwd)/build
 
       - name: Package .ipa
         run: |
           mkdir -p Payload
-          cp -r build/Release-iphonesimulator/CocaColaClicker.app Payload/
+          cp -r build/Release-iphonesimulator/CocaClicker.app Payload/
           zip -r ColaClicker.ipa Payload/
           
       - name: Upload .ipa Artifact
