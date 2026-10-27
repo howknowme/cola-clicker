@@ -92,5 +92,5 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.APP_NAME }}-ipa
+          name: name: ${{ env.APP_NAME }}-run${{ github.run_number }}
           path: build/${{ env.APP_NAME }}.ipa
