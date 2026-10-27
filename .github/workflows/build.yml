@@ -19,26 +19,32 @@ jobs:
 
       - name: Create Xcode Project Structure
         run: |
-          mkdir -p ColaClicker/ColaClicker
-          mv ContentView.swift ColaClicker/ColaClicker/
+          mkdir -p CocaClicker
           
-          if [ -f "icon.png" ]; then
-            mkdir -p ColaClicker/ColaClicker/Assets.xcassets/AppIcon.appiconset
-            echo '{"images":[{"idiom":"universal","platform":"ios","size":"1024x1024"}],"info":{"author":"xcode","version":1}}' > ColaClicker/ColaClicker/Assets.xcassets/AppIcon.appiconset/Contents.json
-            cp icon.png ColaClicker/ColaClicker/Assets.xcassets/AppIcon.appiconset/icon-1024.png
+          # Перемещаем файл игры в правильную папку
+          if [ -f "ContentView.swift" ]; then
+            mv ContentView.swift CocaClicker/
           fi
           
-          echo "import SwiftUI" > ColaClicker/ColaClicker/ColaClickerApp.swift
-          echo "@main" >> ColaClicker/ColaClicker/ColaClickerApp.swift
-          echo "struct CockacolaClickerApp: SwiftUI.App {" >> ColaClicker/ColaClicker/ColaClickerApp.swift
-          echo "    var body: some Scene {" >> ColaClicker/ColaClicker/ColaClickerApp.swift
-          echo "        WindowGroup {" >> ColaClicker/ColaClicker/ColaClickerApp.swift
-          echo "            CokeClickerView()" >> ColaClicker/ColaClicker/ColaClickerApp.swift
-          echo "        }" >> ColaClicker/ColaClicker/ColaClickerApp.swift
-          echo "    }" >> ColaClicker/ColaClicker/ColaClickerApp.swift
-          echo "}" >> ColaClicker/ColaClicker/ColaClickerApp.swift
+          # Настраиваем иконку
+          if [ -f "icon.png" ]; then
+            mkdir -p CocaClicker/Assets.xcassets/AppIcon.appiconset
+            echo '{"images":[{"idiom":"universal","platform":"ios","size":"1024x1024"}],"info":{"author":"xcode","version":1}}' > CocaClicker/Assets.xcassets/AppIcon.appiconset/Contents.json
+            cp icon.png CocaClicker/Assets.xcassets/AppIcon.appiconset/icon-1024.png
+          fi
+          
+          # Создаем файл приложения
+          echo "import SwiftUI" > CocaClicker/ColaClickerApp.swift
+          echo "@main" >> CocaClicker/ColaClickerApp.swift
+          echo "struct CockacolaClickerApp: SwiftUI.App {" >> CocaClicker/ColaClickerApp.swift
+          echo "    var body: some Scene {" >> CocaClicker/ColaClickerApp.swift
+          echo "        WindowGroup {" >> CocaClicker/ColaClickerApp.swift
+          echo "            CokeClickerView()" >> CocaClicker/ColaClickerApp.swift
+          echo "        }" >> CocaClicker/ColaClickerApp.swift
+          echo "    }" >> CocaClicker/ColaClickerApp.swift
+          echo "}" >> CocaClicker/ColaClickerApp.swift
 
-          cd ColaClicker
+          # Создаем project.yml для xcodegen
           echo "name: CocaColaClicker" > project.yml
           echo "options:" >> project.yml
           echo "  bundleIdPrefix: com.robert.colaclicker" >> project.yml
@@ -46,7 +52,7 @@ jobs:
           echo "  CocaColaClicker:" >> project.yml
           echo "    type: application" >> project.yml
           echo "    platform: iOS" >> project.yml
-          echo "    sources: [ColaClicker]" >> project.yml
+          echo "    sources: [CocaClicker]" >> project.yml
           echo "    settings:" >> project.yml
           echo "      GENERATE_INFOPLIST_FILE: \"YES\"" >> project.yml
           
@@ -57,7 +63,6 @@ jobs:
 
       - name: Package .ipa
         run: |
-          cd ColaClicker
           mkdir -p Payload
           cp -r build/Release-iphonesimulator/CocaColaClicker.app Payload/
           zip -r ColaClicker.ipa Payload/
@@ -66,4 +71,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ColaClicker-ipa
-          path: ColaClicker/ColaClicker/ColaClicker.ipa
+          path: ColaClicker.ipa
