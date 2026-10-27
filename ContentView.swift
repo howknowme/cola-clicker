@@ -57,10 +57,12 @@ struct ContentView: View {
 
                 VStack(spacing: 12) {
                     upgrade("Сильнее клик (+1)", cost: clickCost) {
-                        count -= clickCost; perClick += 1
+                        count -= clickCost
+                        perClick += 1
                     }
                     upgrade("Автокликер (+1/сек)", cost: autoCost) {
-                        count -= autoCost; autoRate += 1
+                        count -= autoCost
+                        autoRate += 1
                     }
                 }
                 .padding(.horizontal)
@@ -71,3 +73,18 @@ struct ContentView: View {
     }
 
     private func upgrade(_ title: String, cost: Int, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Text(title)
+                Spacer()
+                Text("\(cost)").bold()
+            }
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(Color.white.opacity(count >= cost ? 0.95 : 0.35),
+                        in: RoundedRectangle(cornerRadius: 14))
+            .foregroundStyle(.black)
+        }
+        .disabled(count < cost)
+    }
+}
