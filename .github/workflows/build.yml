@@ -44,12 +44,12 @@ jobs:
           echo "    }" >> Sources/App.swift
           echo "}" >> Sources/App.swift
 
-          # Создаем Info.plist с поддержкой актуальных версий iOS, чтобы убрать ошибку совместимости
+          # Чистый и правильный Info.plist без ошибок в тегах
           cat << 'EOF' > Sources/Info.plist
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
-          dict>
+          <dict>
               <key>CFBundleIdentifier</key>
               <string>com.robert.colaclicker</string>
               <key>CFBundleName</key>
@@ -71,8 +71,6 @@ jobs:
           </dict>
           </plist>
           EOF
-          # Исправление тега dict для корректности
-          sed -i '' 's/dict>/<dict>/g' Sources/Info.plist
 
           echo "name: CocaColaClicker" > project.yml
           echo "options:" >> project.yml
