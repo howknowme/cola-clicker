@@ -49,14 +49,11 @@ jobs:
           echo "    sources: [ColaClicker]" >> project.yml
           echo "    settings:" >> project.yml
           echo "      GENERATE_INFOPLIST_FILE: \"YES\"" >> project.yml
-          echo "      CODE_SIGN_IDENTITY: \"\"" >> project.yml
-          echo "      CODE_SIGNING_REQUIRED: \"NO\"" >> project.yml
-          echo "      CODE_SIGNING_ALLOWED: \"NO\"" >> project.yml
           
           brew install xcodegen
           xcodegen generate
           
-          xcodebuild -project CocaColaClicker.xcodeproj -scheme CocaColaClicker -sdk iphonesimulator -configuration Release CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED="NO" CODE_SIGNING_ALLOWED="NO" build SYMROOT=$(pwd)/build
+          xcodebuild -project CocaColaClicker.xcodeproj -scheme CocaColaClicker -sdk iphonesimulator -configuration Release build SYMROOT=$(pwd)/build
 
       - name: Package .ipa
         run: |
