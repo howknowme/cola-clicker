@@ -22,63 +22,35 @@ jobs:
           mkdir -p ColaClicker/ColaClicker
           mv ContentView.swift ColaClicker/ColaClicker/
           
-          # Проверяем, есть ли иконка, и настраиваем Assets
           if [ -f "icon.png" ]; then
-            echo "Иконка найдена, добавляем в проект..."
             mkdir -p ColaClicker/ColaClicker/Assets.xcassets/AppIcon.appiconset
-            
-            # Создаем базовый Contents.json для иконки
-            cat << 'EOF' > ColaClicker/ColaClicker/Assets.xcassets/AppIcon.appiconset/Contents.json
-            {
-              "images" : [
-                {
-                  "idiom" : "universal",
-                  "platform" : "ios",
-                  "size" : "1024x1024"
-                }
-              ],
-              "info" : {
-                "author" : "xcode",
-                "version" : 1
-              }
-            }
-            EOF
-            
-            # Копируем картинку в набор иконки
+            echo '{"images":[{"idiom":"universal","platform":"ios","size":"1024x1024"}],"info":{"author":"xcode","version":1}}' > ColaClicker/ColaClicker/Assets.xcassets/AppIcon.appiconset/Contents.json
             cp icon.png ColaClicker/ColaClicker/Assets.xcassets/AppIcon.appiconset/icon-1024.png
-            # Обновляем имя файла в JSON под размер 1024
-            sed -i '' 's/"size" : "1024x1024"/'"filename" : "icon-1024.png",\n      "size" : "1024x1024"'/g' ColaClicker/ColaClicker/Assets.xcassets/AppIcon.appiconset/Contents.json
           fi
           
-          cat << 'EOF' > ColaClicker/ColaClicker/ColaClickerApp.swift
-          import SwiftUI
-          @main
-          struct CockacolaClickerApp: SwiftUI.App {
-              var body: some Scene {
-                  WindowGroup {
-                      CokeClickerView()
-                  }
-              }
-          }
-          EOF
+          echo "import SwiftUI" > ColaClicker/ColaClicker/ColaClickerApp.swift
+          echo "@main" >> ColaClicker/ColaClicker/ColaClickerApp.swift
+          echo "struct CockacolaClickerApp: SwiftUI.App {" >> ColaClicker/ColaClicker/ColaClickerApp.swift
+          echo "    var body: some Scene {" >> ColaClicker/ColaClicker/ColaClickerApp.swift
+          echo "        WindowGroup {" >> ColaClicker/ColaClicker/ColaClickerApp.swift
+          echo "            CokeClickerView()" >> ColaClicker/ColaClicker/ColaClickerApp.swift
+          echo "        }" >> ColaClicker/ColaClicker/ColaClickerApp.swift
+          echo "    }" >> ColaClicker/ColaClicker/ColaClickerApp.swift
+          echo "}" >> ColaClicker/ColaClicker/ColaClickerApp.swift
 
           cd ColaClicker
-          
-          # Создаем проект с кастомным названием
-          cat << 'EOF' > project.yml
-          name: CocaColaClicker
-          options:
-            bundleIdPrefix: com.robert.colaclicker
-          targets:
-            CocaColaClicker:
-              type: application
-              platform: iOS
-              sources: [ColaClicker]
-              settings:
-                CODE_SIGN_IDENTITY: ""
-                CODE_SIGNING_REQUIRED: "NO"
-                CODE_SIGNING_ALLOWED: "NO"
-          EOF
+          echo "name: CocaColaClicker" > project.yml
+          echo "options:" >> project.yml
+          echo "  bundleIdPrefix: com.robert.colaclicker" >> project.yml
+          echo "targets:" >> project.yml
+          echo "  CocaColaClicker:" >> project.yml
+          echo "    type: application" >> project.yml
+          echo "    platform: iOS" >> project.yml
+          echo "    sources: [ColaClicker]" >> project.yml
+          echo "    settings:" >> project.yml
+          echo "      CODE_SIGN_IDENTITY: \"\"" >> project.yml
+          echo "      CODE_SIGNING_REQUIRED: \"NO\"" >> project.yml
+          echo "      CODE_SIGNING_ALLOWED: \"NO\"" >> project.yml
           
           brew install xcodegen
           xcodegen generate
