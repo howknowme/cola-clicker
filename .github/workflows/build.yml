@@ -12,15 +12,16 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Build App Manually
+    - name: Build with Correct Bundle ID
       run: |
-        # Создаем структуру .app пакета
         APP_NAME="CocaColaClicker"
-        BUNDLE_ID="com.robert.colaclicker"
+        # Используем твой Bundle ID из .mobileprovision профиля
+        BUNDLE_ID="app.forest5669.sapodilla72"
+        TEAM_ID="65ZBN43KNV"
         
         mkdir -p Payload/$APP_NAME.app
         
-        # Пишем исходный код ContentView
+        # Пишем код ContentView.swift
         cat << 'EOF' > ContentView.swift
         import SwiftUI
 
@@ -29,52 +30,33 @@ jobs:
             
             var body: some View {
                 ZStack {
-                    LinearGradient(colors: [.red, .black], startPoint: .top, endPoint: .bottom)
-                        .ignoresSafeArea()
-                    
+                    Color.black.ignoresSafeArea()
                     VStack(spacing: 25) {
                         Text("Coca-Cola Clicker")
                             .font(.largeTitle)
                             .fontWeight(.heavy)
-                            .foregroundColor(.white)
+                            .foregroundColor(.red)
                         
                         Text("Score: \(count)")
                             .font(.system(size: 40, weight: .bold))
-                            .foregroundColor(.yellow)
-                        
-                        Spacer()
+                            .foregroundColor(.white)
                         
                         Button(action: {
                             count += 1
                         }) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color.white)
-                                    .frame(width: 180, height: 180)
-                                    .shadow(radius: 10)
-                                
-                                VStack(spacing: 5) {
-                                    Image(systemName: "cup.and.saucer.fill")
-                                        .font(.system(size: 60))
-                                        .foregroundColor(.red)
-                                    
-                                    Text("DRINK!")
-                                        .font(.headline)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.black)
-                                }
-                            }
+                            Text("DRINK COLA")
+                                .font(.headline)
+                                .padding()
+                                .background(Color.red)
+                                .foregroundColor(.white)
+                                .cornerRadius(15)
                         }
-                        
-                        Spacer()
                     }
-                    .padding()
                 }
             }
         }
         EOF
 
-        # Пишем точку входа App.swift
         cat << 'EOF' > App.swift
         import SwiftUI
 
@@ -88,7 +70,7 @@ jobs:
         }
         EOF
 
-        # Компилируем напрямую под arm64 для реального айфона
+        # Компилируем под реальный iPhone arm64
         swiftc -target arm64-apple-ios17.0 \
                -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
                -framework SwiftUI \
@@ -97,14 +79,14 @@ jobs:
                ContentView.swift App.swift \
                -o Payload/$APP_NAME.app/$APP_NAME
 
-        # Создаем правильный Info.plist
+        # Создаем Info.plist с твоим Bundle ID
         cat << 'EOF' > Payload/$APP_NAME.app/Info.plist
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
         <plist version="1.0">
         <dict>
             <key>CFBundleIdentifier</key>
-            <string>com.robert.colaclicker</string>
+            <string>app.forest5669.sapodilla72</string>
             <key>CFBundleName</key>
             <string>CocaColaClicker</string>
             <key>CFBundleDisplayName</key>
@@ -127,7 +109,26 @@ jobs:
         </plist>
         EOF
 
-        # Запаковываем в готовый .ipa
+        # Создаем entitlements под твой Team ID и Bundle ID
+        cat << 'EOF' > entitlements.plist
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>application-identifier</key>
+            <string>65ZBN43KNV.app.forest5669.sapodilla72</string>
+            <key>com.apple.developer.team-identifier</key>
+            <string>65ZBN43KNV</string>
+            <key>get-task-allow</key>
+            <true/>
+        </dict>
+        </plist>
+        EOF
+
+        # Подписываем заглушкой с правильными правами
+        codesign -s - --entitlements entitlements.plist Payload/$APP_NAME.app
+
+        # Запаковываем в .ipa
         zip -r ColaClicker.ipa Payload
 
     - name: Upload .ipa Artifact
