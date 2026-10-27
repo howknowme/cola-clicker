@@ -48,21 +48,21 @@ jobs:
           echo "    platform: iOS" >> project.yml
           echo "    sources: [ColaClicker]" >> project.yml
           echo "    settings:" >> project.yml
-          echo "      CODE_SIGN_IDENTITY: \"-\"" >> project.yml
+          echo "      GENERATE_INFOPLIST_FILE: \"YES\"" >> project.yml
+          echo "      CODE_SIGN_IDENTITY: \"\"" >> project.yml
           echo "      CODE_SIGNING_REQUIRED: \"NO\"" >> project.yml
-          echo "      CODE_SIGNING_ALLOWED: \"YES\"" >> project.yml
-          echo "      CODE_SIGN_STYLE: \"Manual\"" >> project.yml
+          echo "      CODE_SIGNING_ALLOWED: \"NO\"" >> project.yml
           
           brew install xcodegen
           xcodegen generate
           
-          xcodebuild -project CocaColaClicker.xcodeproj -scheme CocaColaClicker -sdk iphoneos -configuration Release CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED="NO" CODE_SIGNING_ALLOWED="YES" CODE_SIGN_STYLE="Manual" build SYMROOT=$(pwd)/build
+          xcodebuild -project CocaColaClicker.xcodeproj -scheme CocaColaClicker -sdk iphonesimulator -configuration Release CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED="NO" CODE_SIGNING_ALLOWED="NO" build SYMROOT=$(pwd)/build
 
       - name: Package .ipa
         run: |
           cd ColaClicker
           mkdir -p Payload
-          cp -r build/Release-iphoneos/CocaColaClicker.app Payload/
+          cp -r build/Release-iphonesimulator/CocaColaClicker.app Payload/
           zip -r ColaClicker.ipa Payload/
           
       - name: Upload .ipa Artifact
