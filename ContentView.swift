@@ -1,5 +1,5 @@
 import SwiftUI
- 
+
 @main
 struct CocaColaClickerApp: App {
     var body: some Scene {
@@ -21,7 +21,6 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-
     private let maxOffline: Double = 24 * 60 * 60
     private let limit = 1_000_000_000_000
 
@@ -38,6 +37,8 @@ struct ContentView: View {
                 Text("Coca-Cola Clicker v3")
                     .font(.largeTitle.bold())
                     .foregroundStyle(.white)
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
 
                 VStack(spacing: 2) {
                     Text("\(count)")
@@ -56,7 +57,7 @@ struct ContentView: View {
                     .foregroundStyle(.white.opacity(0.8))
 
                 Button {
-                    count += perClick
+                    count = min(count + perClick, limit)
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     withAnimation(.spring(duration: 0.15)) { pressed = true }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
