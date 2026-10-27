@@ -48,14 +48,15 @@ jobs:
           echo "    platform: iOS" >> project.yml
           echo "    sources: [ColaClicker]" >> project.yml
           echo "    settings:" >> project.yml
-          echo "      CODE_SIGN_IDENTITY: \"\"" >> project.yml
+          echo "      CODE_SIGN_IDENTITY: \"-\"" >> project.yml
           echo "      CODE_SIGNING_REQUIRED: \"NO\"" >> project.yml
-          echo "      CODE_SIGNING_ALLOWED: \"NO\"" >> project.yml
+          echo "      CODE_SIGNING_ALLOWED: \"YES\"" >> project.yml
+          echo "      CODE_SIGN_STYLE: \"Manual\"" >> project.yml
           
           brew install xcodegen
           xcodegen generate
           
-          xcodebuild -project CocaColaClicker.xcodeproj -scheme CocaColaClicker -sdk iphoneos -configuration Release CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED="NO" CODE_SIGNING_ALLOWED="NO" build SYMROOT=$(pwd)/build
+          xcodebuild -project CocaColaClicker.xcodeproj -scheme CocaColaClicker -sdk iphoneos -configuration Release CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED="NO" CODE_SIGNING_ALLOWED="YES" CODE_SIGN_STYLE="Manual" build SYMROOT=$(pwd)/build
 
       - name: Package .ipa
         run: |
