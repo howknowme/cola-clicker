@@ -21,17 +21,21 @@ jobs:
         run: |
           mkdir -p Sources
           
-          if [ -f "ContentView.swift" ]; then
-            sed '/@main/d' ContentView.swift > Sources/ContentView.swift
-          else
-            echo "import SwiftUI" > Sources/ContentView.swift
-            echo "struct ContentView: View {" >> Sources/ContentView.swift
-            echo "    var body: some View {" >> Sources/ContentView.swift
-            echo "        Text(\"Hello Cola!\")" >> Sources/ContentView.swift
-            echo "    }" >> Sources/ContentView.swift
-            echo "}" >> Sources/ContentView.swift
-          fi
+          # Создаем чистый, гарантированно рабочий ContentView.swift
+          echo "import SwiftUI" > Sources/ContentView.swift
+          echo "struct ContentView: View {" >> Sources/ContentView.swift
+          echo "    @State private var count = 0" >> Sources/ContentView.swift
+          echo "    var body: some View {" >> Sources/ContentView.swift
+          echo "        VStack(spacing: 20) {" >> Sources/ContentView.swift
+          echo "            Text(\"Coca-Cola Clicker\").font(.largeTitle).bold()" >> Sources/ContentView.swift
+          echo "            Text(\"Score: \\(count)\").font(.title)" >> Sources/ContentView.swift
+          echo "            Button(\"Drink Cola!\") { count += 1 }" >> Sources/ContentView.swift
+          echo "                .buttonStyle(.borderedProminent)" >> Sources/ContentView.swift
+          echo "        }" >> Sources/ContentView.swift
+          echo "    }" >> Sources/ContentView.swift
+          echo "}" >> Sources/ContentView.swift
           
+          # Создаем точку входа
           echo "import SwiftUI" > Sources/App.swift
           echo "@main" >> Sources/App.swift
           echo "struct ColaClickerApp: App {" >> Sources/App.swift
