@@ -42,7 +42,6 @@ jobs:
           echo "    }" >> Sources/App.swift
           echo "}" >> Sources/App.swift
 
-          # Создаем project.yml без подключения сторонних ассетов, чтобы избежать ошибок
           echo "name: CocaColaClicker" > project.yml
           echo "options:" >> project.yml
           echo "  bundleIdPrefix: com.robert.colaclicker" >> project.yml
@@ -53,6 +52,7 @@ jobs:
           echo "    sources: [Sources]" >> project.yml
           echo "    settings:" >> project.yml
           echo "      GENERATE_INFOPLIST_FILE: \"YES\"" >> project.yml
+          echo "      EXCLUDED_ARCHS[sdk=iphonesimulator*]: \"i386\"" >> project.yml
           
           brew install xcodegen
           xcodegen generate
