@@ -9,6 +9,7 @@ env:
   APP_NAME: CocaColaClicker
   BUNDLE_ID: app.forest5669.sapodilla72
   TEAM_ID: 65ZBN43KNV
+  RUN_NUM: ${{ github.run_number }}
 
 jobs:
   build:
@@ -19,6 +20,8 @@ jobs:
       - name: Compile
         run: |
           set -euo pipefail
+          echo "let buildStamp = \"сборка #${RUN_NUM}\"" > BuildInfo.swift
+          ls -la *.swift
           SDK=$(xcrun --sdk iphoneos --show-sdk-path)
           APP="build/${APP_NAME}.app"
           rm -rf build && mkdir -p "$APP"
@@ -26,7 +29,7 @@ jobs:
             -target arm64-apple-ios17.0 -parse-as-library -O \
             -module-name "$APP_NAME" \
             -Xlinker -rpath -Xlinker @executable_path/Frameworks \
-            ContentView.swift -o "$APP/$APP_NAME"
+            ContentView.swift AdminView.swift BuildInfo.swift -o "$APP/$APP_NAME"
 
       - name: Info.plist and icon
         run: |
@@ -39,11 +42,11 @@ jobs:
             <key>CFBundleExecutable</key><string>${APP_NAME}</string>
             <key>CFBundleIdentifier</key><string>${BUNDLE_ID}</string>
             <key>CFBundleName</key><string>${APP_NAME}</string>
-            <key>CFBundleDisplayName</key><string>Cola v3</string>
+            <key>CFBundleDisplayName</key><string>Coca-Cola Clicker</string>
             <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
             <key>CFBundlePackageType</key><string>APPL</string>
             <key>CFBundleShortVersionString</key><string>1.0</string>
-            <key>CFBundleVersion</key><string>${{ github.run_number }}</string>
+            <key>CFBundleVersion</key><string>${RUN_NUM}</string>
             <key>CFBundleSupportedPlatforms</key><array><string>iPhoneOS</string></array>
             <key>MinimumOSVersion</key><string>17.0</string>
             <key>LSRequiresIPhoneOS</key><true/>
