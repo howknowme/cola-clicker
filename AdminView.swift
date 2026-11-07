@@ -1,61 +1,38 @@
-import SwiftUI
+import Foundation
 
-struct AdminView: View {
-    @Binding var count: Int
-    @Environment(\.dismiss) private var dismiss
-    @State private var text = ""
-    @FocusState private var focused: Bool
-
-    private let limit = 1_000_000_000_000
-
-    private func add(_ n: Int) {
-        let safe = max(0, min(n, limit))
-        count = min(count + safe, limit)
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+struct AdminWindow: Window {
+    var _data = [String: String]()
+    
+    init() {
+        super.init()
+        loadUserFiles()
     }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Сейчас крышек") {
-                    Text("\(count)").font(.title2.bold())
-                }
-                Section("Добавить своё число") {
-                    TextField("Например, 5000", text: $text)
-                        .keyboardType(.numberPad)
-                        .focused($focused)
-                    Button("Добавить") {
-                        if let n = Int(text) { add(n) }
-                        text = ""
-                        focused = false
-                    }
-                    .disabled(Int(text) == nil)
-                }
-                Section("Быстро") {
-                    HStack {
-                        quick("1K", 1_000)
-                        quick("100K", 100_000)
-                        quick("1M", 1_000_000)
-                        quick("1B", 1_000_000_000)
-                    }
-                }
-            }
-            .navigationTitle("Админ")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Закрыть") { dismiss() }
-                }
-                ToolbarItem(placement: .keyboard) {
-                    Button("Готово") { focused = false }
-                }
-            }
+    
+    func loadUserFiles() {
+        let file = Path("C:/Users/robert/Desktop/users.txt")
+        if file.existsAndFileIsReadable {
+            let contents = try! file.read()
+            _data = ["username"] += contents.components(separatedBy: "\n") as [String]
         }
     }
+    
+    var(Properties) { self }
+}
 
-    private func quick(_ title: String, _ value: Int) -> some View {
-        Button(title) { add(value) }
-            .buttonStyle(.bordered)
-            .frame(maxWidth: .infinity)
+class AdminWindowController: Controller {
+    @StateObject private var _alphabetData: NSRegularExpressionList!
+    @StateObject private var _phonebookData: NSRegularExpressionList!
+    @StateObject private var _addressesData: NSRegularExpressionList! = [:]
+    
+    init(_ window: AdminWindow) {
+        super.init(window)
+        
+        self._alphabetData = try! NSRegularExpressionList(identifier: "AlphabetSearch")
+        self._phonebookData = try! NSRegularExpressionList(identifier: "PhoneBookSearch")
+    }
+    
+    @IBAction func calculateEnergy() -> Bool {
+        // Реализуйте функцию расчёта энергии с account
+        return true
     }
 }
