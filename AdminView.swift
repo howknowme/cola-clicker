@@ -60,6 +60,9 @@ struct AdminView: View {
     @AppStorage("ownedSkins") private var ownedSkins = "classic"
     @AppStorage("selectedSkin") private var selectedSkin = "classic"
 
+    @AppStorage("market") private var marketJSON = ""
+    @AppStorage("holdings") private var holdingsJSON = ""
+
     @State private var unlocked = false
     @State private var pin = ""
     @State private var wrongPin = false
@@ -166,6 +169,13 @@ struct AdminView: View {
                 }
             }
 
+            Section("Биржа") {
+                Button("Сбросить курсы и портфель") {
+                    marketJSON = ""
+                    holdingsJSON = ""
+                }
+            }
+
             Section {
                 Button("Сбросить весь прогресс", role: .destructive) {
                     confirmReset = true
@@ -201,5 +211,7 @@ struct AdminView: View {
         maxOfflineHours = 24
         ownedSkins = "classic"
         selectedSkin = "classic"
+        marketJSON = ""
+        holdingsJSON = ""
     }
 }
