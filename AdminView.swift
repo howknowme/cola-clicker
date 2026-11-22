@@ -62,6 +62,9 @@ struct AdminView: View {
 
     @AppStorage("market") private var marketJSON = ""
     @AppStorage("holdings") private var holdingsJSON = ""
+    @AppStorage("stock") private var stockJSON = ""
+    @AppStorage("bizLevels") private var bizLevelsJSON = ""
+    @AppStorage("warehouse") private var warehouse = 0
 
     @State private var unlocked = false
     @State private var pin = ""
@@ -169,6 +172,16 @@ struct AdminView: View {
                 }
             }
 
+            Section("Бизнес") {
+                NumberRow(title: "Склад (ур.)", value: $warehouse, range: 0...Game.maxWarehouse)
+                Button("Выдать +1000 колы каждого сорта") { addStock(1000) }
+                Button("Сбросить бизнесы и склад") {
+                    stockJSON = ""
+                    bizLevelsJSON = ""
+                    warehouse = 0
+                }
+            }
+
             Section("Биржа") {
                 Button("Сбросить курсы и портфель") {
                     marketJSON = ""
@@ -213,5 +226,14 @@ struct AdminView: View {
         selectedSkin = "classic"
         marketJSON = ""
         holdingsJSON = ""
+        stockJSON = ""
+        bizLevelsJSON = ""
+        warehouse = 0
+    }
+
+    private func addStock(_ n: Int) {
+        var st = decodeJSON([String: Int].self, stockJSON) ?? [:]
+        for g in Grade.all { st[g.id, default: 0] += n }
+        if let s = encodeJSON(st) { stockJSON = s }
     }
 }
