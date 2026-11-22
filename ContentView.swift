@@ -165,6 +165,79 @@ struct FloaterView: View {
     }
 }
 
+// MARK: - Биржа
+
+struct CoinInfo: Identifiable {
+    let id: String
+    let name: String
+    let symbol: String
+    let icon: String
+    let color: Color
+    let base: Double   // "справедливая" цена, к которой курс тянется
+    let vol: Double    // волатильность за секунду
+
+    static let all: [CoinInfo] = [
+        CoinInfo(id: "cola", name: "КолаКоин", symbol: "COLA", icon: "drop.fill",
+                 color: .red, base: 100, vol: 0.01),
+        CoinInfo(id: "cap", name: "КрышкаКоин", symbol: "CAP", icon: "bitcoinsign.circle.fill",
+                 color: .orange, base: 500, vol: 0.02),
+        CoinInfo(id: "fizz", name: "ФиззКоин", symbol: "FIZZ", icon: "bolt.fill",
+                 color: .teal, base: 2_500, vol: 0.035),
+        CoinInfo(id: "moon", name: "МунКоин", symbol: "MOON", icon: "moon.stars.fill",
+                 color: .purple, base: 20_000, vol: 0.05),
+    ]
+}
+
+struct CoinState: Codable {
+    var price: Double
+    var trend: Double
+    var history: [Double]
+
+    static func initial(_ coin: CoinInfo) -> CoinState {
+        CoinState(price: coin.base, trend: 0, history: [coin.base])
+    }
+
+    /// Один шаг рынка: случайный шум + затяжной тренд + слабая тяга к базовой цене
+    mutating func step(_ coin: CoinInfo) {
+        let noise = (Double.random(in: -1...1) + Double.random(in: -1...1)) / 2
+        trend = trend * 0.95 + Double.random(in: -1...1) * coin.vol * 0.15
+        let reversion = 0.01 * log(coin.base / price)
+        let r = trend + noise * coin.vol + reversion
+        price = min(max(price * exp(r), coin.base * 0.1), coin.base * 10)
+        history.append(price)
+        if history.count > 60 { history.removeFirst(history.count - 60) }
+    }
+}
+
+struct Holding: Codable {
+    var units: Int
+    var spent: Int
+}
+
+struct Sparkline: View {
+    let values: [Double]
+    let color: Color
+
+    var body: some View {
+        GeometryReader { geo in
+            let lo = values.min() ?? 0
+            let hi = values.max() ?? 1
+            let range = max(hi - lo, 0.0001)
+            Path { p in
+                for (i, v) in values.enumerated() {
+                    let x = values.count > 1 ? geo.size.width * CGFloat(i) / CGFloat(values.count - 1) : 0
+                    let y = hi - lo < 0.0001
+                        ? geo.size.height / 2
+                        : geo.size.height * (1 - CGFloat((v - lo) / range))
+                    if i == 0 { p.move(to: CGPoint(x: x, y: y)) }
+                    else { p.addLine(to: CGPoint(x: x, y: y)) }
+                }
+            }
+            .stroke(color, style: StrokeStyle(lineWidth: 2, lineJoin: .round))
+        }
+    }
+}
+
 // MARK: - Главный экран
 
 struct ContentView: View {
@@ -188,6 +261,12 @@ struct ContentView: View {
     @State private var lastTap = Date.distantPast
     @State private var tab = 0
     @State private var floaters: [Floater] = []
+    @State private var market: [String: CoinState] = [:]
+    @AppStorage("market") private var marketJSON = ""
+    @AppStorage("holdings") private var holdingsJSON = ""
+
+    private let upColor = Color(red: 0.1, green: 0.65, blue: 0.25)
+    private let downColor = Color(red: 0.85, green: 0.1, blue: 0.1)
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -256,12 +335,15 @@ struct ContentView: View {
 
                 Picker("", selection: $tab) {
                     Text("Улучшения").tag(0)
-                    Text("Магазин крышек").tag(1)
+                    Text("Крышки").tag(1)
+                    Text("Биржа").tag(2)
                 }
                 .pickerStyle(.segmented)
 
                 ScrollView {
-                    if tab == 0 { upgradesList } else { shopGrid }
+                    if tab == 0 { upgradesList }
+                    else if tab == 1 { shopGrid }
+                    else { marketList }
                 }
 
                 Text(buildStamp)
@@ -271,10 +353,17 @@ struct ContentView: View {
             .padding()
         }
         .onReceive(timer) { _ in
+            stepMarket()
             count = min(count + autoGain, Game.limit)
             lastSeen = Date().timeIntervalSince1970
         }
-        .onAppear { applyOffline() }
+        .onAppear {
+            loadMarket()
+            applyOffline()
+        }
+        .onChange(of: marketJSON) { _, new in
+            if new.isEmpty { market = [:] }   // сброс из админки
+        }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
@@ -436,6 +525,172 @@ struct ContentView: View {
         .disabled(!owned && !canBuy)
     }
 
+    // MARK: Биржа
+
+    private var holdings: [String: Holding] {
+        get {
+            (try? JSONDecoder().decode([String: Holding].self, from: Data(holdingsJSON.utf8))) ?? [:]
+        }
+        nonmutating set {
+            if let data = try? JSONEncoder().encode(newValue),
+               let str = String(data: data, encoding: .utf8) {
+                holdingsJSON = str
+            }
+        }
+    }
+
+    private func loadMarket() {
+        if let data = marketJSON.data(using: .utf8),
+           let decoded = try? JSONDecoder().decode([String: CoinState].self, from: data) {
+            market = decoded
+        }
+    }
+
+    private func stepMarket(times: Int = 1) {
+        var m = market
+        for _ in 0..<max(1, times) {
+            for coin in CoinInfo.all {
+                var s = m[coin.id] ?? CoinState.initial(coin)
+                s.step(coin)
+                m[coin.id] = s
+            }
+        }
+        market = m
+        if let data = try? JSONEncoder().encode(m),
+           let str = String(data: data, encoding: .utf8) {
+            marketJSON = str
+        }
+    }
+
+    private var marketList: some View {
+        VStack(spacing: 10) {
+            Picker("", selection: $buyAmount) {
+                Text("×1").tag(1)
+                Text("×10").tag(10)
+                Text("×100").tag(100)
+                Text("×1000").tag(1000)
+                Text("МАКС").tag(0)
+            }
+            .pickerStyle(.segmented)
+
+            Text("Курс меняется каждую секунду. Покупайте дёшево, продавайте дорого!")
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.7))
+                .multilineTextAlignment(.center)
+
+            ForEach(CoinInfo.all) { coinCard($0) }
+        }
+        .padding(.bottom, 4)
+    }
+
+    private func coinCard(_ coin: CoinInfo) -> some View {
+        let st = market[coin.id] ?? CoinState.initial(coin)
+        let price = max(1, Int(st.price.rounded()))
+        let h = holdings[coin.id] ?? Holding(units: 0, spent: 0)
+        let first = st.history.first ?? st.price
+        let change = first > 0 ? (st.price / first - 1) * 100 : 0
+        let trendColor: Color = st.price >= first ? upColor : downColor
+        let value = h.units * price
+        let pl = value - h.spent
+        let afford = count / price
+        let buyN = buyAmount == 0 ? afford : min(buyAmount, afford)
+        let sellN = buyAmount == 0 ? h.units : min(buyAmount, h.units)
+        let buyShow = buyN > 0 ? buyN : max(1, buyAmount)
+
+        return VStack(spacing: 8) {
+            HStack(spacing: 10) {
+                Image(systemName: coin.icon)
+                    .font(.title3)
+                    .foregroundStyle(.white)
+                    .frame(width: 40, height: 40)
+                    .background(Circle().fill(coin.color))
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(coin.name).bold()
+                    Text(coin.symbol).font(.caption).opacity(0.6)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 0) {
+                    Text(price.formatted()).font(.title3.bold())
+                    Text("\(change >= 0 ? "▲" : "▼") \(String(format: "%.1f", abs(change)))%")
+                        .font(.caption.bold())
+                        .foregroundStyle(trendColor)
+                }
+            }
+
+            Sparkline(values: st.history, color: trendColor)
+                .frame(height: 44)
+
+            HStack {
+                Text(h.units > 0
+                     ? "У вас: \(h.units.formatted()) • \(value.formatted())"
+                     : "У вас пока нет монет")
+                    .font(.caption)
+                Spacer()
+                if h.units > 0 {
+                    Text("\(pl >= 0 ? "+" : "−")\(abs(pl).formatted())")
+                        .font(.caption.bold())
+                        .foregroundStyle(pl >= 0 ? upColor : downColor)
+                }
+            }
+
+            HStack(spacing: 8) {
+                tradeButton("Купить",
+                            "×\(buyShow.formatted()) • \((buyShow * price).formatted())",
+                            color: upColor, enabled: buyN > 0) {
+                    buy(coin, price: price, n: buyN)
+                }
+                tradeButton("Продать",
+                            sellN > 0 ? "×\(sellN.formatted()) • +\((sellN * price).formatted())" : "—",
+                            color: downColor, enabled: sellN > 0) {
+                    sell(coin, price: price, n: sellN)
+                }
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity)
+        .background(Color.white.opacity(0.95), in: RoundedRectangle(cornerRadius: 14))
+        .foregroundStyle(.black)
+    }
+
+    private func tradeButton(_ title: String, _ sub: String, color: Color, enabled: Bool,
+                             action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 0) {
+                Text(title).bold()
+                Text(sub).font(.caption2)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(color.opacity(enabled ? 1 : 0.35), in: RoundedRectangle(cornerRadius: 10))
+            .foregroundStyle(.white)
+        }
+        .disabled(!enabled)
+    }
+
+    private func buy(_ coin: CoinInfo, price: Int, n: Int) {
+        guard n > 0, count >= n * price else { return }
+        count -= n * price
+        var all = holdings
+        var h = all[coin.id] ?? Holding(units: 0, spent: 0)
+        h.units += n
+        h.spent += n * price
+        all[coin.id] = h
+        holdings = all
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
+    private func sell(_ coin: CoinInfo, price: Int, n: Int) {
+        var all = holdings
+        guard var h = all[coin.id], n > 0, n <= h.units else { return }
+        count = min(count + n * price, Game.limit)
+        let removed = Int(Double(h.spent) * Double(n) / Double(h.units))
+        h.units -= n
+        h.spent = max(0, h.spent - removed)
+        all[coin.id] = h.units == 0 ? nil : h
+        holdings = all
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
     // MARK: Действия
 
     private func tap() {
@@ -458,6 +713,8 @@ struct ContentView: View {
 
     private func applyOffline() {
         let now = Date().timeIntervalSince1970
+        let away = lastSeen > 0 ? max(0, now - lastSeen) : 0
+        if away >= 3 { stepMarket(times: min(Int(away), 1800)) }
         if lastSeen > 0 && autoGain > 0 {
             let maxSeconds = Double(max(1, maxOfflineHours)) * 3600
             let elapsed = min(max(0, now - lastSeen), maxSeconds)
