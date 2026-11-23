@@ -25,6 +25,47 @@ enum Game {
     static func critChance(_ level: Int) -> Int { 5 * level }
     /// Вместимость склада (бутылок всего) по уровню
     static func capacity(_ level: Int) -> Int { 500 * (level + 1) * (level + 1) }
+
+    // MARK: Уровень игрока (по всему заработанному за игру)
+
+    static let maxLevel = 100
+    /// Сколько нужно заработать всего для уровня (индекс = уровень − 1)
+    static let thresholds: [Int] = (1...Game.maxLevel).map { l in
+        l == 1 ? 0 : Int(100 * pow(1.3, Double(l - 2)))
+    }
+
+    static func level(for earned: Int) -> Int {
+        var lv = 1
+        while lv < maxLevel && earned >= thresholds[lv] { lv += 1 }
+        return lv
+    }
+
+    /// Прогресс до следующего уровня, 0...1
+    static func levelProgress(_ earned: Int) -> Double {
+        let lv = level(for: earned)
+        if lv >= maxLevel { return 1 }
+        let lo = thresholds[lv - 1]
+        let hi = thresholds[lv]
+        return min(1, max(0, Double(earned - lo) / Double(max(1, hi - lo))))
+    }
+
+    /// Награда в крышках за достижение уровня
+    static func levelReward(_ l: Int) -> Int {
+        max(100, thresholds[min(max(l, 1), maxLevel) - 1] / 10)
+    }
+
+    static func levelTitle(_ l: Int) -> String {
+        switch l {
+        case ..<5: return "Новичок"
+        case 5..<10: return "Продавец"
+        case 10..<20: return "Торговец"
+        case 20..<30: return "Бизнесмен"
+        case 30..<45: return "Магнат"
+        case 45..<60: return "Король колы"
+        case 60..<80: return "Легенда"
+        default: return "Бог газировки"
+        }
+    }
 }
 
 // MARK: - JSON-помощники для хранения в @AppStorage
@@ -194,6 +235,177 @@ struct CapView: View {
     }
 }
 
+// MARK: - Фоны и шрифты
+
+extension Color {
+    static func rgb(_ r: Double, _ g: Double, _ b: Double) -> Color {
+        Color(red: r, green: g, blue: b)
+    }
+}
+
+struct SplitMix: RandomNumberGenerator {
+    var state: UInt64
+    init(seed: UInt64) { state = seed }
+    mutating func next() -> UInt64 {
+        state &+= 0x9E3779B97F4A7C15
+        var z = state
+        z = (z ^ (z >> 30)) &* 0xBF58476D1CE4E5B9
+        z = (z ^ (z >> 27)) &* 0x94D049BB133111EB
+        return z ^ (z >> 31)
+    }
+}
+
+struct StarField: View {
+    var body: some View {
+        Canvas { ctx, size in
+            var g = SplitMix(seed: 7)
+            for _ in 0..<70 {
+                let x = CGFloat.random(in: 0...size.width, using: &g)
+                let y = CGFloat.random(in: 0...size.height, using: &g)
+                let r = CGFloat.random(in: 0.5...1.8, using: &g)
+                let a = Double.random(in: 0.3...0.9, using: &g)
+                ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r * 2, height: r * 2)),
+                         with: .color(.white.opacity(a)))
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+struct AppBackground: Identifiable {
+    let id: String
+    let name: String
+    let price: Int
+    let minLevel: Int
+    let colors: [Color]
+    var angular = false
+    var stars = false
+
+    static let all: [AppBackground] = [
+        AppBackground(id: "classic", name: "Классика", price: 0, minLevel: 1,
+                      colors: [.rgb(0.75, 0.05, 0.1), .black]),
+        AppBackground(id: "ocean", name: "Океан", price: 5_000, minLevel: 3,
+                      colors: [.rgb(0.05, 0.4, 0.7), .rgb(0.0, 0.08, 0.2)]),
+        AppBackground(id: "forest", name: "Лес", price: 20_000, minLevel: 5,
+                      colors: [.rgb(0.1, 0.5, 0.2), .rgb(0.0, 0.1, 0.05)]),
+        AppBackground(id: "sunset", name: "Закат", price: 80_000, minLevel: 8,
+                      colors: [.rgb(0.9, 0.4, 0.2), .rgb(0.6, 0.15, 0.45), .rgb(0.1, 0.05, 0.2)]),
+        AppBackground(id: "night", name: "Ночь", price: 250_000, minLevel: 10,
+                      colors: [.rgb(0.15, 0.15, 0.5), .black]),
+        AppBackground(id: "candy", name: "Конфета", price: 600_000, minLevel: 14,
+                      colors: [.rgb(0.85, 0.3, 0.6), .rgb(0.25, 0.05, 0.3)]),
+        AppBackground(id: "desert", name: "Пустыня", price: 1_200_000, minLevel: 16,
+                      colors: [.rgb(0.8, 0.55, 0.2), .rgb(0.25, 0.1, 0.0)]),
+        AppBackground(id: "gold", name: "Золотой", price: 2_000_000, minLevel: 18,
+                      colors: [.rgb(0.7, 0.5, 0.05), .rgb(0.12, 0.07, 0.0)]),
+        AppBackground(id: "glacier", name: "Ледник", price: 6_000_000, minLevel: 22,
+                      colors: [.rgb(0.3, 0.6, 0.85), .rgb(0.02, 0.1, 0.25)]),
+        AppBackground(id: "volcano", name: "Вулкан", price: 20_000_000, minLevel: 26,
+                      colors: [.rgb(0.9, 0.3, 0.0), .rgb(0.35, 0.0, 0.0), .black]),
+        AppBackground(id: "neoncity", name: "Неон-сити", price: 60_000_000, minLevel: 30,
+                      colors: [.rgb(0.5, 0.0, 0.7), .rgb(0.0, 0.5, 0.7), .black]),
+        AppBackground(id: "aurora", name: "Северное сияние", price: 200_000_000, minLevel: 36,
+                      colors: [.rgb(0.0, 0.5, 0.3), .rgb(0.1, 0.2, 0.6), .rgb(0.4, 0.1, 0.6), .rgb(0.0, 0.5, 0.3)],
+                      angular: true),
+        AppBackground(id: "galaxy", name: "Галактика", price: 800_000_000, minLevel: 42,
+                      colors: [.rgb(0.1, 0.0, 0.25), .black], stars: true),
+        AppBackground(id: "rainbow", name: "Радуга", price: 3_000_000_000, minLevel: 50,
+                      colors: [.rgb(0.7, 0.1, 0.1), .rgb(0.7, 0.4, 0.0), .rgb(0.6, 0.6, 0.0),
+                               .rgb(0.1, 0.5, 0.1), .rgb(0.1, 0.2, 0.7), .rgb(0.4, 0.1, 0.6),
+                               .rgb(0.7, 0.1, 0.1)],
+                      angular: true),
+        AppBackground(id: "void", name: "Бездна", price: 20_000_000_000, minLevel: 60,
+                      colors: [.rgb(0.2, 0.0, 0.3), .black, .black], stars: true),
+    ]
+
+    static func find(_ id: String) -> AppBackground {
+        all.first { $0.id == id } ?? all[0]
+    }
+}
+
+struct BackgroundArt: View {
+    let bg: AppBackground
+
+    var body: some View {
+        ZStack {
+            if bg.angular {
+                AngularGradient(colors: bg.colors, center: .center)
+            } else {
+                LinearGradient(colors: bg.colors, startPoint: .top, endPoint: .bottom)
+            }
+            if bg.stars { StarField() }
+        }
+    }
+}
+
+struct GameFont: Identifiable {
+    let id: String
+    let name: String
+    let price: Int
+    let minLevel: Int
+    var family: String? = nil
+    var design: Font.Design? = nil
+
+    func font(size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        if let family {
+            return Font.custom(family, size: size).weight(weight)
+        }
+        return Font.system(size: size, weight: weight, design: design ?? .default)
+    }
+
+    static let all: [GameFont] = [
+        GameFont(id: "system", name: "Стандартный", price: 0, minLevel: 1),
+        GameFont(id: "rounded", name: "Округлый", price: 10_000, minLevel: 2, design: .rounded),
+        GameFont(id: "serif", name: "С засечками", price: 30_000, minLevel: 4, design: .serif),
+        GameFont(id: "mono", name: "Моно", price: 100_000, minLevel: 6, design: .monospaced),
+        GameFont(id: "typewriter", name: "Пишущая машинка", price: 400_000, minLevel: 9,
+                 family: "American Typewriter"),
+        GameFont(id: "georgia", name: "Georgia", price: 1_200_000, minLevel: 13, family: "Georgia"),
+        GameFont(id: "avenir", name: "Avenir Next", price: 3_000_000, minLevel: 17, family: "Avenir Next"),
+        GameFont(id: "marker", name: "Маркер", price: 8_000_000, minLevel: 21, family: "Marker Felt"),
+        GameFont(id: "noteworthy", name: "Заметки", price: 25_000_000, minLevel: 25, family: "Noteworthy"),
+        GameFont(id: "chalk", name: "Мел", price: 70_000_000, minLevel: 29, family: "Chalkduster"),
+        GameFont(id: "futura", name: "Futura", price: 200_000_000, minLevel: 34, family: "Futura"),
+        GameFont(id: "copper", name: "Copperplate", price: 600_000_000, minLevel: 40, family: "Copperplate"),
+        GameFont(id: "snell", name: "Каллиграфия", price: 2_000_000_000, minLevel: 46,
+                 family: "Snell Roundhand"),
+        GameFont(id: "papyrus", name: "Папирус", price: 6_000_000_000, minLevel: 55, family: "Papyrus"),
+        GameFont(id: "zapfino", name: "Zapfino", price: 25_000_000_000, minLevel: 65, family: "Zapfino"),
+    ]
+
+    static func find(_ id: String) -> GameFont {
+        all.first { $0.id == id } ?? all[0]
+    }
+}
+
+struct GameFontKey: EnvironmentKey {
+    static let defaultValue = GameFont.all[0]
+}
+
+extension EnvironmentValues {
+    var gameFont: GameFont {
+        get { self[GameFontKey.self] }
+        set { self[GameFontKey.self] = newValue }
+    }
+}
+
+struct AppFont: ViewModifier {
+    @Environment(\.gameFont) private var gameFont
+    let size: CGFloat
+    let weight: Font.Weight
+
+    func body(content: Content) -> some View {
+        content.font(gameFont.font(size: size, weight: weight))
+    }
+}
+
+extension View {
+    /// Шрифт, выбранный игроком в магазине
+    func appFont(_ size: CGFloat, _ weight: Font.Weight = .regular) -> some View {
+        modifier(AppFont(size: size, weight: weight))
+    }
+}
+
 // MARK: - Всплывающие "+N"
 
 struct Floater: Identifiable {
@@ -209,7 +421,7 @@ struct FloaterView: View {
 
     var body: some View {
         Text(floater.text)
-            .font(floater.crit ? .title.bold() : .title3.bold())
+            .appFont(floater.crit ? 28 : 20, .bold)
             .foregroundStyle(floater.crit ? Color.yellow : Color.white)
             .shadow(radius: 2)
             .offset(x: floater.dx, y: up ? -130 : -20)
@@ -431,6 +643,12 @@ struct ContentView: View {
     @AppStorage("stock") private var stockJSON = ""
     @AppStorage("bizLevels") private var bizLevelsJSON = ""
     @AppStorage("warehouse") private var warehouse = 0
+    @AppStorage("ownedBackgrounds") private var ownedBackgrounds = "classic"
+    @AppStorage("selectedBackground") private var selectedBackground = "classic"
+    @AppStorage("ownedFonts") private var ownedFonts = "system"
+    @AppStorage("selectedFont") private var selectedFont = "system"
+    @AppStorage("totalEarned") private var totalEarned = 0
+    @AppStorage("lastLevel") private var lastLevel = 1
 
     @State private var pressed = false
     @State private var showAdmin = false
@@ -443,6 +661,8 @@ struct ContentView: View {
     @State private var floaters: [Floater] = []
     @State private var market: [String: CoinState] = [:]
     @State private var supplyNote = ""
+    @State private var shopTab = 0
+    @State private var levelUpText = ""
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -457,23 +677,29 @@ struct ContentView: View {
 
     private var ownedList: [String] { ownedSkins.split(separator: ",").map(String.init) }
     private var currentSkin: CapSkin { CapSkin.find(selectedSkin) }
+    private var currentBackground: AppBackground { AppBackground.find(selectedBackground) }
+    private var currentFont: GameFont { GameFont.find(selectedFont) }
+    private var playerLevel: Int { Game.level(for: totalEarned) }
+    private var ownedBgList: [String] { ownedBackgrounds.split(separator: ",").map(String.init) }
+    private var ownedFontList: [String] { ownedFonts.split(separator: ",").map(String.init) }
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color(red: 0.75, green: 0.05, blue: 0.1), .black],
-                           startPoint: .top, endPoint: .bottom)
+            BackgroundArt(bg: currentBackground)
                 .ignoresSafeArea()
 
             VStack(spacing: 12) {
                 Text("Coca-Cola Clicker")
-                    .font(.largeTitle.bold())
+                    .appFont(28, .bold)
                     .foregroundStyle(.white)
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
 
+                levelBar
+
                 VStack(spacing: 2) {
                     Text(count.formatted())
-                        .font(.system(size: 56, weight: .heavy, design: .rounded))
+                        .appFont(56, .heavy)
                         .foregroundStyle(.white)
                         .minimumScaleFactor(0.4)
                         .lineLimit(1)
@@ -496,7 +722,7 @@ struct ContentView: View {
 
                 Text("+\(clickGain.formatted()) за клик • +\(autoGain.formatted())/сек"
                      + (critLevel > 0 ? " • крит \(Game.critChance(critLevel))%" : ""))
-                    .font(.subheadline)
+                    .appFont(15)
                     .foregroundStyle(.white.opacity(0.8))
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
@@ -516,21 +742,24 @@ struct ContentView: View {
 
                 ScrollView {
                     if tab == 0 { upgradesList }
-                    else if tab == 1 { shopGrid }
+                    else if tab == 1 { shopScreen }
                     else if tab == 2 { marketList }
                     else { businessScreen }
                 }
 
                 Text(buildStamp)
-                    .font(.caption2)
+                    .appFont(11)
                     .foregroundStyle(.white.opacity(0.4))
             }
             .padding()
         }
+        .environment(\.gameFont, currentFont)
+        .overlay(alignment: .top) { levelBanner }
         .onReceive(timer) { _ in
             stepMarket()
             let bizIncome = runBusinesses(seconds: 1)
             count = min(count + autoGain + bizIncome, Game.limit)
+            addEarned(autoGain + bizIncome)
             lastSeen = Date().timeIntervalSince1970
         }
         .onAppear {
@@ -565,10 +794,10 @@ struct ContentView: View {
 
     private var tabBar: some View {
         HStack(spacing: 6) {
-            ForEach(Array(["Прокачка", "Крышки", "Биржа", "Бизнес"].enumerated()), id: \.offset) { i, name in
+            ForEach(Array(["Прокачка", "Магазин", "Биржа", "Бизнес"].enumerated()), id: \.offset) { i, name in
                 Button { tab = i } label: {
                     Text(name)
-                        .font(.subheadline.bold())
+                        .appFont(15, .bold)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                         .frame(maxWidth: .infinity)
@@ -662,7 +891,7 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).bold()
                     Text(maxed ? detail : "\(detail) • купить ×\(plan.n.formatted())")
-                        .font(.caption)
+                        .appFont(12)
                         .opacity(0.6)
                 }
                 Spacer()
@@ -706,12 +935,189 @@ struct ContentView: View {
                 CapView(skin: skin, size: 90)
                 Text(skin.name).bold()
                 Text(status)
-                    .font(.subheadline.bold())
+                    .appFont(15, .bold)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
                     .background(Color.black.opacity(0.08), in: Capsule())
             }
             .padding(.vertical, 12)
+            .frame(maxWidth: .infinity)
+            .background(Color.white.opacity((owned || canBuy) ? 0.95 : 0.35),
+                        in: RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(selected ? Color.yellow : .clear, lineWidth: 3)
+            )
+            .foregroundStyle(.black)
+        }
+        .disabled(!owned && !canBuy)
+    }
+
+    // MARK: Уровень
+
+    private var levelBar: some View {
+        let lv = playerLevel
+        let frac = Game.levelProgress(totalEarned)
+        let right = lv >= Game.maxLevel ? "МАКС" : "\(Int(frac * 100))%"
+        return VStack(spacing: 3) {
+            HStack {
+                Text("Ур. \(lv) • \(Game.levelTitle(lv))").appFont(13, .bold)
+                Spacer()
+                Text(right).appFont(12, .bold).opacity(0.7)
+            }
+            ProgressView(value: frac).tint(.yellow)
+        }
+        .foregroundStyle(.white)
+    }
+
+    @ViewBuilder
+    private var levelBanner: some View {
+        if !levelUpText.isEmpty {
+            Text(levelUpText)
+                .appFont(15, .bold)
+                .foregroundStyle(.black)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.yellow, in: Capsule())
+                .shadow(radius: 6)
+                .padding(.top, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
+
+    private func addEarned(_ n: Int) {
+        guard n > 0 else { return }
+        totalEarned += n
+        let lv = Game.level(for: totalEarned)
+        if lv > lastLevel {
+            var reward = 0
+            for l in (lastLevel + 1)...lv { reward += Game.levelReward(l) }
+            lastLevel = lv
+            count = min(count + reward, Game.limit)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            let text = "Уровень \(lv)! Награда: +\(reward.formatted())"
+            withAnimation { levelUpText = text }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+                if levelUpText == text {
+                    withAnimation { levelUpText = "" }
+                }
+            }
+        }
+    }
+
+    // MARK: Магазин: фоны и шрифты
+
+    private var shopScreen: some View {
+        VStack(spacing: 10) {
+            Picker("", selection: $shopTab) {
+                Text("Крышки").tag(0)
+                Text("Фоны").tag(1)
+                Text("Шрифты").tag(2)
+            }
+            .pickerStyle(.segmented)
+
+            if shopTab == 0 { shopGrid }
+            else if shopTab == 1 { backgroundGrid }
+            else { fontList }
+        }
+        .padding(.bottom, 4)
+    }
+
+    private var backgroundGrid: some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
+                  spacing: 10) {
+            ForEach(AppBackground.all) { backgroundCell($0) }
+        }
+    }
+
+    private func backgroundCell(_ bg: AppBackground) -> some View {
+        let owned = ownedBgList.contains(bg.id)
+        let selected = selectedBackground == bg.id
+        let locked = !owned && playerLevel < bg.minLevel
+        let canBuy = !locked && count >= bg.price
+        let status = selected ? "Выбрано ✓" : (owned ? "Выбрать" : (locked ? "🔒 Ур. \(bg.minLevel)" : bg.price.formatted()))
+        return Button {
+            if owned {
+                selectedBackground = bg.id
+            } else if canBuy {
+                count -= bg.price
+                ownedBackgrounds += "," + bg.id
+                selectedBackground = bg.id
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
+        } label: {
+            VStack(spacing: 6) {
+                BackgroundArt(bg: bg)
+                    .frame(height: 70)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                Text(bg.name).bold().lineLimit(1).minimumScaleFactor(0.7)
+                if locked {
+                    Text(bg.price.formatted()).appFont(11).opacity(0.6)
+                }
+                Text(status)
+                    .appFont(15, .bold)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .background(Color.black.opacity(0.08), in: Capsule())
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity)
+            .background(Color.white.opacity((owned || canBuy) ? 0.95 : 0.35),
+                        in: RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(selected ? Color.yellow : .clear, lineWidth: 3)
+            )
+            .foregroundStyle(.black)
+        }
+        .disabled(!owned && !canBuy)
+    }
+
+    private var fontList: some View {
+        VStack(spacing: 10) {
+            Text("Если в шрифте нет русских букв, iOS заменит их стандартными")
+                .appFont(11)
+                .foregroundStyle(.white.opacity(0.6))
+                .multilineTextAlignment(.center)
+            ForEach(GameFont.all) { fontRow($0) }
+        }
+    }
+
+    private func fontRow(_ gf: GameFont) -> some View {
+        let owned = ownedFontList.contains(gf.id)
+        let selected = selectedFont == gf.id
+        let locked = !owned && playerLevel < gf.minLevel
+        let canBuy = !locked && count >= gf.price
+        let status = selected ? "Выбрано ✓" : (owned ? "Выбрать" : (locked ? "🔒 Ур. \(gf.minLevel)" : gf.price.formatted()))
+        return Button {
+            if owned {
+                selectedFont = gf.id
+            } else if canBuy {
+                count -= gf.price
+                ownedFonts += "," + gf.id
+                selectedFont = gf.id
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
+        } label: {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(gf.name).font(.system(size: 13, weight: .bold)).opacity(0.6)
+                    Text("Крышки 12345 Coca")
+                        .font(gf.font(size: 20, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                    if locked {
+                        Text(gf.price.formatted()).font(.system(size: 11)).opacity(0.6)
+                    }
+                }
+                Spacer()
+                Text(status)
+                    .font(.system(size: 15, weight: .bold))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .background(Color.black.opacity(0.08), in: Capsule())
+            }
+            .padding(12)
             .frame(maxWidth: .infinity)
             .background(Color.white.opacity((owned || canBuy) ? 0.95 : 0.35),
                         in: RoundedRectangle(cornerRadius: 14))
@@ -756,7 +1162,7 @@ struct ContentView: View {
             amountPicker
 
             Text("Курс меняется каждую секунду. Покупайте дёшево, продавайте дорого!")
-                .font(.caption)
+                .appFont(12)
                 .foregroundStyle(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
 
@@ -796,13 +1202,13 @@ struct ContentView: View {
                     .background(Circle().fill(coin.color))
                 VStack(alignment: .leading, spacing: 0) {
                     Text(coin.name).bold()
-                    Text(coin.symbol).font(.caption).opacity(0.6)
+                    Text(coin.symbol).appFont(12).opacity(0.6)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 0) {
-                    Text(price.formatted()).font(.title3.bold())
+                    Text(price.formatted()).appFont(20, .bold)
                     Text(changeText)
-                        .font(.caption.bold())
+                        .appFont(12, .bold)
                         .foregroundStyle(trendColor)
                 }
             }
@@ -811,11 +1217,11 @@ struct ContentView: View {
                 .frame(height: 44)
 
             HStack {
-                Text(holdText).font(.caption)
+                Text(holdText).appFont(12)
                 Spacer()
                 if h.units > 0 {
                     Text(plText)
-                        .font(.caption.bold())
+                        .appFont(12, .bold)
                         .foregroundStyle(pl >= 0 ? upColor : downColor)
                 }
             }
@@ -840,7 +1246,7 @@ struct ContentView: View {
         Button(action: action) {
             VStack(spacing: 0) {
                 Text(title).bold()
-                Text(sub).font(.caption2)
+                Text(sub).appFont(11)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
@@ -933,7 +1339,7 @@ struct ContentView: View {
             } else {
                 if !supplyNote.isEmpty {
                     Text(supplyNote)
-                        .font(.caption.bold())
+                        .appFont(12, .bold)
                         .foregroundStyle(.yellow)
                         .multilineTextAlignment(.center)
                 }
@@ -964,14 +1370,14 @@ struct ContentView: View {
             HStack {
                 ForEach(Grade.all) { g in
                     VStack(spacing: 0) {
-                        Text((st[g.id] ?? 0).formatted()).font(.subheadline.bold())
-                        Text(g.name).font(.caption2).opacity(0.6)
+                        Text((st[g.id] ?? 0).formatted()).appFont(15, .bold)
+                        Text(g.name).appFont(11).opacity(0.6)
                     }
                     .frame(maxWidth: .infinity)
                 }
             }
             Text("Бизнесы потребляют \(demand.formatted()) бут./сек")
-                .font(.caption)
+                .appFont(12)
                 .opacity(0.7)
 
             warehouseButton(whPlan)
@@ -993,9 +1399,9 @@ struct ContentView: View {
             warehouse += p.n
         } label: {
             HStack {
-                Text(label).font(.subheadline.bold())
+                Text(label).appFont(15, .bold)
                 Spacer()
-                Text(maxed ? "МАКС" : p.total.formatted()).font(.subheadline.bold())
+                Text(maxed ? "МАКС" : p.total.formatted()).appFont(15, .bold)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -1033,19 +1439,19 @@ struct ContentView: View {
                     .background(Circle().fill(biz.color))
                 VStack(alignment: .leading, spacing: 0) {
                     Text(biz.name).bold()
-                    Text(subtitle).font(.caption).opacity(0.6)
+                    Text(subtitle).appFont(12).opacity(0.6)
                 }
                 Spacer()
                 Text(level > 0 ? "ур. \(level)" : "закрыт")
-                    .font(.subheadline.bold())
+                    .appFont(15, .bold)
             }
 
             if level > 0 {
                 HStack {
-                    Text("Спрос: \(need.formatted()) бут./сек").font(.caption)
+                    Text("Спрос: \(need.formatted()) бут./сек").appFont(12)
                     Spacer()
                     Text(statusText)
-                        .font(.caption.bold())
+                        .appFont(12, .bold)
                         .foregroundStyle(available >= need ? upColor : downColor)
                 }
             }
@@ -1114,19 +1520,19 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(sup.name).bold()
                     Text("\(grade.name) • партия \(sup.pack.formatted()) бут.")
-                        .font(.caption).opacity(0.6)
+                        .appFont(12).opacity(0.6)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 0) {
-                    Text("\(perBottle) / бут.").font(.subheadline.bold())
-                    Text(changeText).font(.caption.bold()).foregroundStyle(trendColor)
+                    Text("\(perBottle) / бут.").appFont(15, .bold)
+                    Text(changeText).appFont(12, .bold).foregroundStyle(trendColor)
                 }
             }
 
             Sparkline(values: st.history, color: trendColor)
                 .frame(height: 28)
 
-            Text(sup.note).font(.caption).opacity(0.7)
+            Text(sup.note).appFont(12).opacity(0.7)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             tradeButton("Заказать", btnSub, color: upColor, enabled: canBuy) {
@@ -1166,6 +1572,7 @@ struct ContentView: View {
         let crit = Int.random(in: 1...100) <= Game.critChance(critLevel)
         let gain = clickGain * (crit ? Game.critMultiplier : 1)
         count = min(count + gain, Game.limit)
+        addEarned(gain)
         UIImpactFeedbackGenerator(style: crit ? .heavy : .light).impactOccurred()
         withAnimation(.spring(duration: 0.15)) { pressed = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
@@ -1190,6 +1597,7 @@ struct ContentView: View {
             let gain = secs * autoGain + runBusinesses(seconds: secs)
             if gain > 0 {
                 count = min(count + gain, Game.limit)
+                addEarned(gain)
                 offlineGain = gain
                 showOffline = true
             }
