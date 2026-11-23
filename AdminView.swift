@@ -65,6 +65,12 @@ struct AdminView: View {
     @AppStorage("stock") private var stockJSON = ""
     @AppStorage("bizLevels") private var bizLevelsJSON = ""
     @AppStorage("warehouse") private var warehouse = 0
+    @AppStorage("ownedBackgrounds") private var ownedBackgrounds = "classic"
+    @AppStorage("selectedBackground") private var selectedBackground = "classic"
+    @AppStorage("ownedFonts") private var ownedFonts = "system"
+    @AppStorage("selectedFont") private var selectedFont = "system"
+    @AppStorage("totalEarned") private var totalEarned = 0
+    @AppStorage("lastLevel") private var lastLevel = 1
 
     @State private var unlocked = false
     @State private var pin = ""
@@ -172,6 +178,24 @@ struct AdminView: View {
                 }
             }
 
+            Section("Уровень и оформление") {
+                NumberRow(title: "Всего заработано", value: $totalEarned,
+                          range: 0...(Game.limit * 1000), step: 1000)
+                Text("Уровень игрока: \(Game.level(for: totalEarned)) из \(Game.maxLevel)")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Button("Открыть все фоны и шрифты") {
+                    ownedBackgrounds = AppBackground.all.map(\.id).joined(separator: ",")
+                    ownedFonts = GameFont.all.map(\.id).joined(separator: ",")
+                }
+                Button("Закрыть все фоны и шрифты") {
+                    ownedBackgrounds = "classic"
+                    selectedBackground = "classic"
+                    ownedFonts = "system"
+                    selectedFont = "system"
+                }
+            }
+
             Section("Бизнес") {
                 NumberRow(title: "Склад (ур.)", value: $warehouse, range: 0...Game.maxWarehouse)
                 Button("Выдать +1000 колы каждого сорта") { addStock(1000) }
@@ -229,6 +253,12 @@ struct AdminView: View {
         stockJSON = ""
         bizLevelsJSON = ""
         warehouse = 0
+        ownedBackgrounds = "classic"
+        selectedBackground = "classic"
+        ownedFonts = "system"
+        selectedFont = "system"
+        totalEarned = 0
+        lastLevel = 1
     }
 
     private func addStock(_ n: Int) {
